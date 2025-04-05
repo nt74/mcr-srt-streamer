@@ -35,13 +35,13 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
     * **Haivision-Based Recommendations:** Recommends SRT Latency/Overhead based on measured RTT and Loss (Loss % is estimated when using TCP, potentially leading to higher recommendations). Derived from Haivision SRT Deployment Guide principles.
     * **Apply Settings:** Button to pre-fill Listener form with recommendations.
 * **Real-time Monitoring & Statistics:**
-    * Dashboard with system info and active stream overview.
+    * Dashboard with system info (CPU, Mem, Disk, IP, Uptime, Running User) and active stream overview.
     * Detailed stream view with live-updating charts (Chart.js) for Bitrate/RTT/Loss history, packet counters, connection status (incl. client IP for listeners), and debug info API.
 * **Media Management:**
     * AJAX media browser modal lists `.ts` files from the `media/` folder.
     * Media Info page uses `ffprobe` or `mediainfo` for file details.
 * **Web Interface:**
-    * Built with Bootstrap 5, jQuery, Chart.js (served locally).
+    * Built with Bootstrap 5, jQuery, Chart.js, Font Awesome (all served locally from `app/static/`).
     * Uses custom SVT color theme defined in `app/static/css/style.css`.
     * AJAX updates for system info & streams.
 * **Secure Access & Operations:**
@@ -74,7 +74,7 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
     * Serves static files (`css`, `js`, `fonts`, `images`) from `app/static/`.
 3.  **Service Management (Systemd):** Recommended setup uses two systemd units:
     * `network-tuning.service`: Runs `network-tuning.sh` at boot to apply network `sysctl` optimizations (optional but recommended).
-    * `srt-streamer.service`: Manages the main application process (Waitress via `wsgi.py`), activating the Python virtual environment. Depends on `network-tuning.service`.
+    * `mcr-srt-streamer.service`: Manages the main application process (Waitress via `wsgi.py`), activating the Python virtual environment. Depends on `network-tuning.service`.
 4.  **GStreamer Pipeline Structure (Example):**
     * **File Input:**
         ```gst-pipeline
@@ -89,7 +89,7 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
 
 ## System Requirements
 
-* **Operating System:** Debian/Ubuntu or Rocky Linux/RHEL (or similar Linux distributions with GStreamer 1.0+ support).
+* **Operating System:** Debian/Ubuntu or Rocky Linux/RHEL 9+ (or similar Linux distributions with GStreamer 1.0+ support).
 * **RAM:** Recommend ~1 GB per simultaneous stream (e.g., >= 10 GB for 10 streams).
 * **CPU/GPU:** Low CPU usage expected. GPU is not used.
 * **Network:** Stable connection with sufficient bandwidth (stream bitrate + SRT overhead). Network tuning (`network-tuning.sh`) is recommended for optimal performance.
@@ -107,7 +107,7 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
         ```
 
 2.  **Install System Dependencies:**
-    * Install required system packages.
+    * Install required system packages. **Choose the command block appropriate for your distribution.**
     * **Debian / Ubuntu Example:**
         ```bash
         sudo apt update && sudo apt install -y \
@@ -120,8 +120,10 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
             gstreamer1.0-tools gstreamer1.0-libav \
             nginx curl iperf3 iputils-ping dnsutils ffmpeg mediainfo apache2-utils
         ```
-    * **RHEL / Rocky / Fedora Example:**
+    * **RHEL / Rocky / Fedora 9+ Example:**
         ```bash
+        # Ensure EPEL repository is enabled for iperf3 if needed
+        # sudo dnf install epel-release
         sudo dnf update && sudo dnf install -y \
             python3 python3-pip python3-gobject gobject-introspection-devel \
             cairo-gobject-devel python3-devel pkgconf-pkg-config gcc \
@@ -129,7 +131,7 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
             gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free gstreamer1-libav \
             nginx curl iperf3 iputils bind-utils ffmpeg mediainfo httpd-tools
         ```
-        *(Use `yum` on older RHEL/CentOS)*
+        *(Use `yum` instead of `dnf` on older RHEL/CentOS 7)*
 
 3.  **Set Up Python Environment:**
     * Create and activate a Python virtual environment (e.g., `/opt/venv`).
@@ -153,35 +155,86 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
         ```bash
         sudo mkdir -p /opt/mcr-srt-streamer/media
         # Copy your .ts files here
-        sudo chown -R root:root /opt/mcr-srt-streamer/media # Adjust owner if service runs non-root
+        # Set permissions (adjust user/group if service runs non-root)
+        sudo chown -R root:root /opt/mcr-srt-streamer/media
         sudo chmod 755 /opt/mcr-srt-streamer/media
         sudo chmod 644 /opt/mcr-srt-streamer/media/*.ts
         ```
-    * **Multicast Channels:** Edit `app/data/iptv_channels.json` to define your multicast sources if using that input type.
-    * **Log/Data Directories:** Ensure writable by the service user (default: root).
+    * **Multicast Channels (`app/data/iptv_channels.json`):** Edit this file to define your multicast sources. It should be a JSON list of objects. The `name`, `address`, and `port` fields are used to populate the dropdown menu. The `source_ip` field is optional and currently *not* used by the pipeline but can be included for reference. Example structure:
+        ```json
+        [
+          {
+            "name": "Channel Name 1 HD",
+            "address": "239.1.1.1",
+            "port": 1234,
+            "protocol": "udp",
+            "source_ip": "10.0.0.1"
+          },
+          {
+            "name": "Another Channel SD",
+            "address": "239.1.1.2",
+            "port": 1234,
+            "protocol": "udp"
+            // source_ip is optional
+          }
+        ]
+        ```
+    * **Log/Data Directories:** Create directories and ensure they are writable by the user the service will run as (e.g., `nginx` or `root`).
         ```bash
         sudo mkdir -p /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
-        sudo chown root:root /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
-        # Ensure data files are present/writable if needed by utils.py/network_test.py
-        sudo touch /opt/mcr-srt-streamer/app/data/external_ip.txt
+        # If running service as nginx:
+        sudo chown -R nginx:nginx /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
+        # If running service as root (less secure):
+        # sudo chown -R root:root /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
+
+        # Ensure necessary cache files exist (adjust owner if needed)
         sudo touch /opt/mcr-srt-streamer/app/data/external_ip_cache.json
-        # Adjust ownership if service user is not root
+        sudo touch /opt/mcr-srt-streamer/app/data/iperf3_export_servers.json
+        sudo touch /opt/mcr-srt-streamer/app/data/iptv_channels.json # Create if not present
         # sudo chown your_user:your_group /opt/mcr-srt-streamer/app/data/*
         ```
     * **NGINX:**
-        * Configure Nginx as a reverse proxy (see example `nginx.conf` if provided).
-        * Create Basic Auth password file (e.g., `/etc/nginx/.htpasswd`). **Use a strong password and change the user `admin`.**
+        * Configure Nginx as a reverse proxy. Create a configuration file in `/etc/nginx/conf.d/` (e.g., `/etc/nginx/conf.d/mcr-srt-streamer.conf`) or `/etc/nginx/sites-available/` (and link to `sites-enabled`) with content similar to:
+          ```nginx
+          server {
+              listen 80; # Or your desired port
+              server_name your_server_domain_or_ip; # Replace with your server's name/IP
+
+              # Basic Auth Settings
+              auth_basic "Restricted Content";
+              auth_basic_user_file /etc/nginx/.htpasswd; # Path to password file
+
+              location / {
+                  proxy_pass [http://127.0.0.1:5000](http://127.0.0.1:5000); # Forward to Waitress
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_connect_timeout 600s; # Increase timeouts if needed
+                  proxy_send_timeout 600s;
+                  proxy_read_timeout 600s;
+              }
+
+              # Optional: Serve static files directly via Nginx for performance
+              location /static {
+                  alias /opt/mcr-srt-streamer/app/static;
+                  expires 7d;
+                  add_header Cache-Control "public";
+              }
+          }
+          ```
+        * Create the Basic Auth password file. **Use a strong password and change the example user `admin`.**
             ```bash
-            sudo htpasswd -c /etc/nginx/.htpasswd admin
-            # Secure permissions (adjust NGINX_USER if needed)
+            # Install httpd-tools/apache2-utils if not already done
+            sudo htpasswd -c /etc/nginx/.htpasswd admin # Follow prompts for password
+            # Secure permissions (find Nginx user, often nginx or www-data)
             NGINX_USER=$(ps aux | grep '[n]ginx: worker process' | head -n 1 | awk '{print $1}')
             [ -z "$NGINX_USER" ] && NGINX_USER=nginx # Default fallback
             sudo chown $NGINX_USER:$NGINX_USER /etc/nginx/.htpasswd
             sudo chmod 640 /etc/nginx/.htpasswd
             ```
-        * Enable the Nginx site config and restart Nginx.
+        * Test Nginx configuration and restart:
             ```bash
-            # Example: sudo ln -s /opt/mcr-srt-streamer/nginx.conf /etc/nginx/sites-enabled/mcr-srt-streamer
             sudo nginx -t
             sudo systemctl restart nginx
             ```
@@ -195,20 +248,95 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
         ```bash
         sudo chmod +x /opt/mcr-srt-streamer/network-tuning.sh
         ```
-    * Create `/etc/systemd/system/network-tuning.service` (as shown in original README).
-    * Create/Edit `/etc/systemd/system/srt-streamer.service` (as shown in original README):
-        * **PASTE your generated `SECRET_KEY`** into the `Environment="SECRET_KEY=..."` line.
-        * Ensure `WorkingDirectory`, `Environment="MEDIA_FOLDER"`, and `ExecStart` paths are correct.
-    * Reload systemd and enable/start the main service:
+    * **Network Tuning Service (`/etc/systemd/system/network-tuning.service`):** Create this file with the following content:
+        ```ini
+        [Unit]
+        Description=Apply Network Settings for MCR SRT Streamer
+        After=network.target
+        # Ensure it runs before the main app service
+        Before=mcr-srt-streamer.service
+        ConditionFileIsExecutable=/opt/mcr-srt-streamer/network-tuning.sh
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        User=root
+        Group=root
+        ExecStart=/opt/mcr-srt-streamer/network-tuning.sh
+        StandardOutput=journal
+        StandardError=journal
+
+        [Install]
+        # This service is typically WantedBy the main service, not enabled directly
+        ```
+    * **Application Service (`/etc/systemd/system/mcr-srt-streamer.service`):** Create/Edit this file. **It is recommended to run as the `nginx` user for better integration and simpler permissions.**
+        ```ini
+        [Unit]
+        Description=MCR SRT Streamer - Application Server (Waitress)
+        After=network.target network-online.target network-tuning.service nginx.service
+        # Ensure network tuning runs first if present
+        Wants=network-tuning.service
+        Requires=network-online.target
+
+        [Service]
+        Type=simple
+        # Recommended: Run as nginx user. Ensure log/data dirs are owned by nginx (see step 4).
+        User=nginx
+        Group=nginx
+        # Alternative: Run as root (less secure, easier permissions)
+        # User=root
+        # Group=root
+        WorkingDirectory=/opt/mcr-srt-streamer
+        # --- IMPORTANT: Paste your generated SECRET_KEY here ---
+        Environment="SECRET_KEY=PASTE_YOUR_GENERATED_32_BYTE_HEX_KEY_HERE"
+        # --- Other Environment Variables ---
+        Environment="HOST=127.0.0.1"
+        Environment="PORT=5000"
+        Environment="THREADS=8" # Adjust based on server cores/load
+        Environment="MEDIA_FOLDER=/opt/mcr-srt-streamer/media"
+        Environment="FLASK_ENV=production"
+        # --- Execution ---
+        # Ensure the python3 in the venv is used
+        ExecStart=/opt/venv/bin/python3 /opt/mcr-srt-streamer/wsgi.py
+        Restart=on-failure
+        RestartSec=5s
+        TimeoutStopSec=30s
+        KillMode=mixed
+        StandardOutput=journal
+        StandardError=journal
+
+        # --- Security Hardening (Optional - Review paths carefully) ---
+        # PrivateTmp=true
+        # ProtectSystem=strict
+        # ProtectHome=true
+        # NoNewPrivileges=true
+        # CapabilityBoundingSet=CAP_NET_BIND_SERVICE # Only needed if binding low ports as non-root
+        # ReadWritePaths=/opt/mcr-srt-streamer/app/data /var/log/srt-streamer /opt/mcr-srt-streamer/media # Ensure service user can write here
+
+        [Install]
+        WantedBy=multi-user.target
+        ```
+    * **PASTE your generated `SECRET_KEY`** into the `Environment="SECRET_KEY=..."` line in `/etc/systemd/system/mcr-srt-streamer.service`.
+    * **Set Permissions:** If you set `User=nginx`, ensure the `nginx` user owns the necessary directories:
+        ```bash
+        sudo chown -R nginx:nginx /opt/mcr-srt-streamer/app/data /var/log/srt-streamer /opt/mcr-srt-streamer/media
+        ```
+    * **Reload systemd, enable and start the main service:**
         ```bash
         sudo systemctl daemon-reload
-        sudo systemctl enable srt-streamer.service
-        sudo systemctl start srt-streamer.service
+        sudo systemctl enable mcr-srt-streamer.service # Service name matches file
+        sudo systemctl start mcr-srt-streamer.service
         ```
 
-6.  **Verify:**
-    * Check service status: `systemctl status srt-streamer.service network-tuning.service`
-    * Check logs: `journalctl -u srt-streamer.service`, `/var/log/srt-streamer/srt_streamer.log`
+6.  **SELinux (Rocky/RHEL/Fedora):** If Nginx gives 502 errors and `ausearch -m avc -ts recent` shows denials for nginx connecting to port 5000, allow the connection:
+    ```bash
+    sudo setsebool -P httpd_can_network_connect 1
+    sudo systemctl restart nginx
+    ```
+
+7.  **Verify:**
+    * Check service status: `systemctl status mcr-srt-streamer.service network-tuning.service`
+    * Check logs: `journalctl -u mcr-srt-streamer.service`, `/var/log/srt-streamer/srt_streamer.log`
     * Access the web UI via the Nginx address and log in.
 
 ## Usage Workflow
@@ -232,14 +360,11 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
 
 ## Configuration & Tuning Tips
 
-* **SRT Latency:** Buffer for jitter/retransmissions. Set based on RTT (e.g., 4x RTT) & loss. [cite: 383] Higher value used if Sender/Receiver differ[cite: 386].
-* **Bandwidth Overhead:** Reserve extra bandwidth (1-99%) for recovery[cite: 362]. Higher loss needs more overhead[cite: 366]. Start ~25% and adjust based on stats[cite: 384].
+* **SRT Latency:** Buffer for jitter/retransmissions. Set based on RTT (e.g., 4x RTT) & loss. Higher value used if Sender/Receiver differ.
+* **Bandwidth Overhead:** Reserve extra bandwidth (1-99%) for recovery. Higher loss needs more overhead. Start ~25% and adjust based on stats.
 * **TSParse Smoothing Latency:** Adjusts internal buffer in `tsparse` to stabilize PCR timing, crucial for professional decoders. 20-30ms recommended.
-* **Quality of Service (QoS):** `qos=true` flag attempts to set DSCP bits; effectiveness depends on network support[cite: 458].
-* **Monitoring (Stream Details Page):**
-    * High *Send* buffer levels may indicate bitrate too high or overhead too low. Spikes might need more Latency[cite: 474, 467].
-    * Frequent drops to zero in *Receive* buffer suggest bitrate too high. Occasional drops might need more Latency[cite: 471, 472].
-    * Monitor Lost/Skipped Packets. Increase Latency for slow/jitter issues. Lower Bitrate or increase Overhead for large bursts/jumps[cite: 455, 456].
+* **Quality of Service (QoS):** `qos=true` flag attempts to set DSCP bits; effectiveness depends on network support.
+* **Monitoring (Stream Details Page):** Use stats like buffer levels and packet loss/retransmits to fine-tune Latency and Overhead settings based on Haivision guide principles.
 
 ## License
 
@@ -247,7 +372,7 @@ This project is licensed under the **BSD 2-Clause License**. See the `LICENSE` f
 
 ## References
 
-* Haivision SRT Protocol Deployment Guide v1.5.x (Included in `/docs`) [cite: 2]
+* Haivision SRT Protocol Deployment Guide v1.5.x (Included in `/docs`)
 * [SRT Alliance](https://www.srtalliance.org/)
 * [SRT GitHub Repository](https://github.com/Haivision/srt)
 * [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
