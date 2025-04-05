@@ -5,6 +5,7 @@
 # Includes get_active_streams method.
 # FIX: Removed incorrect file path format check in start_stream.
 # FIX: Conditional srtsink sync AND wait-for-connection based on input_type/mode.
+# FIX: Modified get_file_info to remove ffprobe and use only mediainfo.
 
 import gi
 gi.require_version('Gst', '1.0')
@@ -415,22 +416,41 @@ class StreamManager:
     # --- get_file_info ---
     def get_file_info(self, file_path):
         # Assumes path validated by caller
-        abs_file_path = file_path
+        # Construct the absolute path within the designated media folder
+        media_dir = os.path.abspath(self.media_folder)
+        base_filename = os.path.basename(file_path) # Use base filename
+        abs_file_path = os.path.abspath(os.path.join(media_dir, base_filename))
+
+        # Security check: Ensure the path is still within the media folder
+        if not abs_file_path.startswith(media_dir + os.sep):
+            return json.dumps({"error": f"Access denied: File path '{base_filename}' is outside the media directory."}, indent=2)
+        if not os.path.isfile(abs_file_path):
+             return json.dumps({"error": f"File not found: {base_filename}"}, indent=2)
+
         try:
-            cmd = ['ffprobe', '-v', 'error', '-show_format', '-show_streams', '-of', 'json', abs_file_path]
-            r = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=15)
-            return json.dumps(json.loads(r.stdout), indent=2)
-        except FileNotFoundError:
+            # Only use mediainfo
+            cmd = ['mediainfo', '--Output=JSON', abs_file_path]
+            r = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=20)
+            # Attempt to parse the JSON output from mediainfo
             try:
-                cmd = ['mediainfo', '--Output=JSON', abs_file_path]
-                r = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=20)
-                media_info_data = json.loads(r.stdout).get('media', {})
-                return json.dumps(media_info_data, indent=2)
-            except FileNotFoundError: return json.dumps({"error": "Neither ffprobe nor mediainfo found."}, indent=2)
-            except Exception as e_mi: return json.dumps({"error": f"mediainfo failed: {e_mi}"}, indent=2)
-        except subprocess.TimeoutExpired: return json.dumps({"error": "ffprobe timed out."}, indent=2)
-        except subprocess.CalledProcessError as e_ff: return json.dumps({"error": f"ffprobe failed (Code {e_ff.returncode}): {e_ff.stderr or e_ff.stdout}"}, indent=2)
-        except Exception as e: return json.dumps({"error": f"ffprobe execution failed: {str(e)}"}, indent=2)
+                 media_info_data = json.loads(r.stdout).get('media', {})
+                 return json.dumps(media_info_data, indent=2)
+            except json.JSONDecodeError as json_e:
+                 self.logger.error(f"Failed to decode mediainfo JSON output for {base_filename}: {json_e}")
+                 return json.dumps({"error": f"mediainfo returned invalid JSON: {str(json_e)}", "raw_output": r.stdout[:500] + ('...' if len(r.stdout) > 500 else '')}, indent=2)
+
+        except FileNotFoundError:
+            self.logger.error("mediainfo command not found. Please ensure it is installed and in the system PATH.")
+            return json.dumps({"error": "mediainfo command not found."}, indent=2)
+        except subprocess.TimeoutExpired:
+            self.logger.error(f"mediainfo timed out for file: {base_filename}")
+            return json.dumps({"error": "mediainfo timed out."}, indent=2)
+        except subprocess.CalledProcessError as e_mi:
+            self.logger.error(f"mediainfo failed for {base_filename} (Code {e_mi.returncode}): {e_mi.stderr or e_mi.stdout}")
+            return json.dumps({"error": f"mediainfo failed (Code {e_mi.returncode}): {e_mi.stderr or e_mi.stdout}"}, indent=2)
+        except Exception as e:
+            self.logger.error(f"An unexpected error occurred during mediainfo execution for {base_filename}: {str(e)}", exc_info=True)
+            return json.dumps({"error": f"mediainfo execution failed: {str(e)}"}, indent=2)
 
     # --- get_debug_info ---
     def get_debug_info(self, stream_key):
