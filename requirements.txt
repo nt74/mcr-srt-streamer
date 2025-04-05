@@ -1,0 +1,8 @@
+# requirements.txt
+
+Flask>=2.0 # Core web framework
+Flask-WTF>=1.0 # For web forms and CSRF protection
+requests>=2.20 # For fetching network test server list & external IP
+psutil>=5.8 # For system information gathering (CPU, Mem, Disk, etc.)
+waitress>=2.0 # WSGI server used by wsgi.py
+PyGObject>=3.40 # For GStreamer Python bindings (GObject Introspection) - Often best installed via system package manager

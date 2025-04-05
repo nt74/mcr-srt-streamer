@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {# Updated Title #}
+    <title>Media Info: {{ filename }} - MCR SRT Streamer</title>
+    {# *** MODIFIED TO USE LOCAL ASSETS *** #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}"> {# Font Awesome #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> {# Your Custom CSS #}
+    {# *** END MODIFIED ASSETS *** #}
+    <style>
+        /* Styles from original template - potentially move to style.css */
+        .media-info {
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            font-family: monospace; /* Use monospace for preformatted */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        {# --- Header Section with LOGO --- #}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+             <div class="d-flex align-items-center"> {# Wrap title and logo #}
+                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SVT Logo" style="height: 40px; margin-right: 15px;"> {# Adjust height/style as needed #}
+                 <h1><i class="fas fa-info-circle"></i> Media Information</h1>
+            </div>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+        {# --- End Header Section --- #}
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-file-video"></i> {{ filename }}
+            </div>
+            <div class="card-body">
+                {# Display preformatted info #}
+                <pre class="media-info">{{ info }}</pre>
+            </div>
+        </div>
+
+         {# Added Footer for consistency #}
+         <footer class="mt-5 mb-3 text-center text-muted">
+             <hr>
+             <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under BSD 2-Clause.</p>
+         </footer>
+    </div>
+
+    {# *** MODIFIED TO USE LOCAL ASSETS (jQuery/Bootstrap JS likely not needed here but included for consistency) *** #}
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    {# *** END MODIFIED ASSETS *** #}
+</body>
+</html>

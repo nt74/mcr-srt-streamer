@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCR SRT Streamer - Dashboard</title>
+    {# *** MODIFIED TO USE LOCAL ASSETS *** #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}"> {# Font Awesome #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> {# Your Custom CSS #}
+    {# *** END MODIFIED ASSETS *** #}
+
+    <style>
+        /* Custom styles remain the same */
+        .overhead-tooltip { --bs-tooltip-bg: var(--bs-primary); }
+        .form-text { font-size: 0.85rem; }
+        .input-group-text { min-width: 40px; justify-content: center; }
+        .card-header.bg-warning { color: #000 !important; }
+        #refresh-indicator { width: 0.8rem; height: 0.8rem; border-width: 0.15em; }
+        .table td i.fa-fw { margin-right: 5px; }
+        .hidden-input { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        {# --- Header Section with LOGO --- #}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+             <div class="d-flex align-items-center"> {# Wrap title and logo #}
+                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SVT Logo" style="height: 40px; margin-right: 15px;"> {# Adjust height/style as needed #}
+                 <h1><i class="fas fa-satellite-dish"></i> MCR SRT Streamer</h1>
+             </div>
+            <div>
+                <a href="{{ url_for('network_test_page') }}" class="btn btn-info">
+                    <i class="fas fa-network-wired"></i> Network Test
+                </a>
+                 <a href="{{ url_for('caller_page') }}" class="btn btn-warning ms-2">
+                    <i class="fas fa-phone-alt"></i> Start Caller
+                </a>
+            </div>
+        </div>
+        {# --- End Header Section --- #}
+
+        {# Flash Messages & Errors remain the same #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endif %}
+
+        <div class="row">
+            {# --- Listener Stream Form Column --- #}
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-play-circle"></i> Start New Listener Stream
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('start_listener_stream') }}" id="stream-form">
+                            {{ form.csrf_token }}
+
+                            {# Input Type Selection (Default Multicast) #}
+                            <div class="mb-3">
+                                {{ form.input_type.label(class="form-label") }}
+                                {{ form.input_type(class="form-select" + (' is-invalid' if form.input_type.errors else ''), id="input_type_listener") }}
+                                <div id="inputTypeHelp" class="form-text">Choose input: Multicast UDP or local TS File.</div>
+                                {% if form.input_type.errors %} <div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                            </div>
+
+                            {# Conditional File Input Group #}
+                            <div class="mb-3 hidden-input" id="file-input-group-listener"> {# Start hidden #}
+                                {{ form.file_path.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.file_path(class="form-control" + (' is-invalid' if form.file_path.errors else ''), id="file_path_listener") }}
+                                    <button type="button" class="btn btn-secondary" id="browse-media-listener">
+                                        <i class="fas fa-folder-open"></i> Browse
+                                    </button>
+                                </div>
+                                <div id="fileHelp" class="form-text">Select a local .ts file from the media library.</div>
+                                {% if form.file_path.errors %} <div class="invalid-feedback d-block">{% for error in form.file_path.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                            </div>
+
+                            {# Conditional Multicast Input Group (Includes Interface Dropdown) #}
+                             <div class="mb-3" id="multicast-input-group-listener"> {# Start shown #}
+                                <div class="row">
+                                     <div class="col-md-7">
+                                          {{ form.multicast_channel.label(class="form-label") }}
+                                          {{ form.multicast_channel(class="form-select" + (' is-invalid' if form.multicast_channel.errors else ''), id="multicast_channel_listener") }}
+                                          <div id="multicastHelp" class="form-text mb-md-0">Select predefined multicast channel (from iptv_channels.json).</div>
+                                          {% if form.multicast_channel.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_channel.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                                      </div>
+                                      <div class="col-md-5">
+                                          {{ form.multicast_interface.label(class="form-label") }}
+                                          <div class="input-group">
+                                              {{ form.multicast_interface(class="form-select" + (' is-invalid' if form.multicast_interface.errors else ''), id="multicast_interface_listener") }}
+                                              <span class="input-group-text">
+                                                  <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.multicast_interface.description }}"></i>
+                                              </span>
+                                          </div>
+                                          {% if form.multicast_interface.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_interface.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                                      </div>
+                                </div>
+                            </div>
+
+                            {# Listener Port #}
+                            <div class="mb-3">
+                                {{ form.port.label(class="form-label") }}
+                                {{ form.port(class="form-select" + (' is-invalid' if form.port.errors else '')) }}
+                                <div id="portHelp" class="form-text">SRT port this listener will use (Range: 10001-10010).</div>
+                                {% if form.port.errors %} <div class="invalid-feedback d-block">{% for error in form.port.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                            </div>
+
+                            {# Smoothing Latency #}
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                     {{ form.smoothing_latency_ms.label(class="form-label") }}
+                                     <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.smoothing_latency_ms.description }}"></i>
+                                 </div>
+                                {{ form.smoothing_latency_ms(class="form-select" + (' is-invalid' if form.smoothing_latency_ms.errors else '')) }}
+                                {% if form.smoothing_latency_ms.errors %} <div class="invalid-feedback d-block">{% for error in form.smoothing_latency_ms.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                            </div>
+
+                            {# SRT Latency & Overhead #}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.latency.label(class="form-label") }}
+                                    <div class="input-group">
+                                        {{ form.latency(class="form-control" + (' is-invalid' if form.latency.errors else '')) }}
+                                        <span class="input-group-text">ms</span>
+                                    </div>
+                                    <div id="latencyHelp" class="form-text">SRT latency buffer (ms). Range: 20-8000.</div>
+                                    {% if form.latency.errors %} <div class="invalid-feedback d-block">{% for error in form.latency.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        {{ form.overhead_bandwidth.label(class="form-label") }}
+                                        <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.overhead_bandwidth.description }}"></i>
+                                    </div>
+                                    {{ form.overhead_bandwidth(class="form-control" + (' is-invalid' if form.overhead_bandwidth.errors else '')) }}
+                                    <div id="overheadHelp" class="form-text">Recovery bandwidth overhead (%). Range: 1-99.</div> {# Updated help text #}
+                                    {% if form.overhead_bandwidth.errors %} <div class="invalid-feedback d-block">{% for error in form.overhead_bandwidth.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                                </div>
+                            </div>
+
+                            {# Encryption #}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.encryption.label(class="form-label") }}
+                                    {{ form.encryption(class="form-select" + (' is-invalid' if form.encryption.errors else ''), id="encryption_listener") }}
+                                    {% if form.encryption.errors %} <div class="invalid-feedback d-block">{% for error in form.encryption.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                                </div>
+                                <div class="col-md-6 listener-encryption-options" style="display: none;">
+                                    {{ form.passphrase.label(class="form-label") }}
+                                    {{ form.passphrase(class="form-control" + (' is-invalid' if form.passphrase.errors else ''), placeholder="Min 10, Max 79 chars") }}
+                                    {% if form.passphrase.errors %} <div class="invalid-feedback d-block">{% for error in form.passphrase.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                                </div>
+                            </div>
+
+                            {# DVB & QoS #}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                     <div class="form-check">
+                                        {{ form.dvb_compliant(class="form-check-input") }}
+                                        {{ form.dvb_compliant.label(class="form-check-label") }}
+                                        <i class="fas fa-info-circle text-info ms-1" data-bs-toggle="tooltip" title="DVB compliance settings applied via configuration (mandatory)"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ form.qos(class="form-check-input" + (' is-invalid' if form.qos.errors else '')) }}
+                                        {{ form.qos.label(class="form-check-label") }}
+                                        <i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.qos.description }}"></i>
+                                        {% if form.qos.errors %} <div class="invalid-feedback d-block">{% for error in form.qos.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Submit Button #}
+                            <div class="d-flex">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="fas fa-play"></i> Start Listener
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {# System Info Column remains the same #}
+            <div class="col-lg-6">
+                 <div class="card mb-4" id="system-info-card">
+                     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                         <span><i class="fas fa-server"></i> System Information</span>
+                         <small class="text-white-50" id="sys-refresh-time" style="font-size: 0.8rem;"></small>
+                     </div>
+                     <div class="card-body">
+                         <table class="table table-sm table-borderless mb-0"> <tbody>
+                             <tr> <td width="130"><i class="fas fa-microchip fa-fw"></i> CPU Usage</td> <td class="align-middle"><div class="d-flex align-items-center"><div class="progress flex-grow-1 me-2" style="height: 12px;"><div class="progress-bar" id="cpu-bar" role="progressbar" style="width: {{ system_info.cpu_usage }}%;" aria-valuenow="{{ system_info.cpu_usage }}"></div></div><span class="fw-bold" id="cpu-value">{{ system_info.cpu_usage }}%</span></div></td> </tr>
+                             <tr> <td><i class="fas fa-memory fa-fw"></i> Memory Usage</td> <td class="align-middle"><div class="d-flex align-items-center"><div class="progress flex-grow-1 me-2" style="height: 12px;"><div class="progress-bar" id="memory-bar" role="progressbar" style="width: {{ system_info.memory_percent }}%;" aria-valuenow="{{ system_info.memory_percent }}"></div></div><span class="fw-bold" id="memory-value">{{ system_info.memory_percent }}%</span></div><small class="text-muted d-block" id="memory-details">{{ system_info.memory_used }} / {{ system_info.memory_total }}</small></td> </tr>
+                             <tr> <td><i class="fas fa-hdd fa-fw"></i> Disk Usage</td> <td class="align-middle"><div class="d-flex align-items-center"><div class="progress flex-grow-1 me-2" style="height: 12px;"><div class="progress-bar" id="disk-bar" role="progressbar" style="width: {{ system_info.disk_percent }}%;" aria-valuenow="{{ system_info.disk_percent }}"></div></div><span class="fw-bold" id="disk-value">{{ system_info.disk_percent }}%</span></div><small class="text-muted d-block" id="disk-details">{{ system_info.disk_used }} / {{ system_info.disk_total }} (Root)</small></td> </tr>
+                             <tr> <td><i class="fas fa-globe fa-fw"></i> External IP</td> <td id="external-ip">{{ system_info.external_ip }}</td> </tr>
+                             <tr> <td><i class="fas fa-clock fa-fw"></i> UTC Time</td> <td id="utc-time">{{ system_info.utc_time }}</td> </tr>
+                             <tr> <td><i class="fas fa-user fa-fw"></i> Running User</td> <td id="current-user">{{ system_info.current_user }}</td> </tr>
+                             <tr> <td><i class="fas fa-hourglass-half fa-fw"></i> System Uptime</td> <td id="uptime">{{ system_info.uptime }}</td> </tr>
+                          </tbody> </table>
+                     </div>
+                 </div>
+             </div>
+        </div>
+
+        {# Active Streams Section (JS updated) #}
+        <h2 class="mb-3"> <i class="fas fa-broadcast-tower"></i> Active Streams <small class="text-muted fs-6">(Updates every 5s)</small> <span id="refresh-indicator" class="spinner-border spinner-border-sm text-primary ms-2 d-none" role="status" aria-hidden="true"></span> </h2>
+        <div class="row" id="active-streams-container">
+            {# Cards dynamically inserted here by JS #}
+            {% if not active_streams %} <div class="col-12"><div class="alert alert-secondary"> <i class="fas fa-info-circle"></i> No active streams detected. </div></div> {% endif %}
+        </div>
+
+        {# Footer remains the same #}
+        <footer class="mt-5 mb-3 text-center text-muted"> <hr> <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under BSD 2-Clause.</p> </footer>
+    </div>
+
+    {# Media Browser Modal remains the same #}
+    <div class="modal fade" id="mediaBrowserModal" tabindex="-1" aria-labelledby="mediaBrowserModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable"> <div class="modal-content">
+            <div class="modal-header bg-secondary text-white"> <h5 class="modal-title" id="mediaBrowserModalLabel"> <i class="fas fa-folder-open"></i> Select Media File </h5> <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button> </div>
+            <div class="modal-body">
+                 <div class="d-flex justify-content-between align-items-center mb-3"><h6>Available Media Files (.ts)</h6><button id="refresh-media-listener" class="btn btn-sm btn-outline-secondary"><i class="fas fa-sync"></i> Refresh List</button> </div>
+                 <div id="media-loading-listener" class="text-center" style="display: none;"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Loading...</span></div><p>Loading media files...</p></div>
+                 <div id="media-error-listener" class="alert alert-danger" style="display: none;"></div>
+                 <div class="table-responsive"><table class="table table-hover" id="media-files-listener"><thead><tr><th>File Name</th><th>Size</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
+            <div class="modal-footer"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button> </div>
+        </div> </div>
+    </div>
+
+    {# --- JAVASCRIPT --- #}
+    {# *** MODIFIED TO USE LOCAL ASSETS *** #}
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    {# Chart.js not needed on this page directly #}
+    {# *** END MODIFIED ASSETS *** #}
+
+    {# Javascript remains the same #}
+    <script>
+        $(document).ready(function() {
+            // Tooltips
+            const tooltipTriggerList = [...document.querySelectorAll('[data-bs-toggle="tooltip"]')];
+            tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+            // --- Listener Form Specific Logic ---
+            $('#encryption_listener').change(function() { $('.listener-encryption-options').toggle($(this).val() !== 'none'); }).trigger('change');
+
+            // *** UPDATED: Input Type Visibility Toggle (Handles Interface Field) ***
+            const inputTypeSelect = $('#input_type_listener');
+            const fileGroup = $('#file-input-group-listener');
+            const multicastGroup = $('#multicast-input-group-listener');
+            // Assume multicast_interface field is within multicastGroup
+
+            function toggleInputFields() {
+                const selectedType = inputTypeSelect.val();
+                fileGroup.addClass('hidden-input');     // Hide by default
+                multicastGroup.addClass('hidden-input'); // Hide by default
+                if (selectedType === 'file') { fileGroup.removeClass('hidden-input'); }
+                else if (selectedType === 'multicast') { multicastGroup.removeClass('hidden-input'); }
+            }
+            inputTypeSelect.on('change', toggleInputFields);
+            toggleInputFields(); // Set initial state based on default ('multicast')
+            // --- *** END: Input Type Visibility Toggle *** ---
+
+            // --- Media Browser Logic ---
+            let activeFilePathInput = null;
+            $('#browse-media-listener').click(function() { activeFilePathInput = $('#file_path_listener'); loadMediaFilesListener(); $('#mediaBrowserModal').modal('show'); });
+            $('#refresh-media-listener').click(loadMediaFilesListener);
+            function loadMediaFilesListener() {
+                const targetTbody = $('#media-files-listener tbody'); targetTbody.empty();
+                $('#media-loading-listener').show(); $('#media-error-listener').hide();
+                $.ajax({ url: '/media', type: 'GET', dataType: 'json',
+                    success: function(data) {
+                        $('#media-loading-listener').hide();
+                        if (!data || data.length === 0) { targetTbody.append('<tr><td colspan="3" class="text-center text-muted">No .ts media files found.</td></tr>'); return; }
+                        data.forEach(function(file) {
+                            const row = `<tr><td class="text-break">${file.name}</td><td>${formatBytes(file.size)}</td><td><button class="btn btn-sm btn-primary select-media-listener" data-file="${file.name}"><i class="fas fa-check"></i> Select</button> <a href="/media_info/${encodeURIComponent(file.name)}" target="_blank" class="btn btn-sm btn-info ms-1" title="View Info"><i class="fas fa-info-circle"></i> Info</a></td></tr>`;
+                            targetTbody.append(row);
+                        });
+                        targetTbody.off('click', '.select-media-listener').on('click', '.select-media-listener', function() { const fileName = $(this).data('file'); if (activeFilePathInput) { activeFilePathInput.val(fileName); } $('#mediaBrowserModal').modal('hide'); });
+                    }, error: function(xhr) { $('#media-loading-listener').hide(); $('#media-error-listener').show().text('Error: ' + (xhr.responseJSON?.error || 'Unknown error')); }
+                });
+            }
+
+            // --- System Info & Active Streams Update Logic (Corrected Card Rendering) ---
+            function updateSystemInfo() { /* ... keep existing implementation ... */ $.getJSON('/system_info',function(d){if(!d)return;const n=new Date(),t=n.toTimeString().split(' ')[0];$('#sys-refresh-time').text('Upd: '+t);$('#cpu-value').text((d.cpu_usage||0).toFixed(1)+'%');$('#cpu-bar').css('width',(d.cpu_usage||0)+'%').attr('aria-valuenow',d.cpu_usage||0);$('#memory-value').text((d.memory_percent||0).toFixed(1)+'%');$('#memory-bar').css('width',(d.memory_percent||0)+'%').attr('aria-valuenow',d.memory_percent||0);$('#memory-details').text((d.memory_used||'N/A')+' / '+(d.memory_total||'N/A'));$('#disk-value').text((d.disk_percent||0).toFixed(1)+'%');$('#disk-bar').css('width',(d.disk_percent||0)+'%').attr('aria-valuenow',d.disk_percent||0);$('#disk-details').text((d.disk_used||'N/A')+' / '+(d.disk_total||'N/A')+' (Root)');$('#external-ip').text(d.external_ip||'?');$('#utc-time').text(d.utc_time||'N/A');$('#current-user').text(d.current_user||'?');$('#uptime').text(d.uptime||'N/A');}).fail(function(){console.error("Fail sys info");});}
+            function updateActiveStreams() {
+                $('#refresh-indicator').removeClass('d-none');
+                $.getJSON('/get_active_streams', function(streams) {
+                    const container = $('#active-streams-container'); container.empty();
+                    if (!streams || Object.keys(streams).length === 0) { container.html('<div class="col-12"><div class="alert alert-secondary"><i class="fas fa-info-circle"></i> No active streams.</div></div>'); return; }
+                    const sortedKeys = Object.keys(streams).sort((a, b) => parseInt(a) - parseInt(b));
+                    for (const key of sortedKeys) {
+                        const stream = streams[key]; if (!stream) continue;
+                        // Define variables based on stream data (corrected)
+                        let headerClass='bg-secondary', statusClass='bg-secondary', statusIcon='fa-question-circle';
+                        if(stream.connection_status==='Connected'){headerClass = stream.mode === 'caller'?'bg-warning text-dark':'bg-success';statusClass = 'bg-success'; statusIcon = 'fa-check-circle';}
+                        else if(['Waiting for connection','Connecting...','Connection Failed','Timeout / Reconnecting','Broken / Reconnecting'].includes(stream.connection_status)){headerClass='bg-info'; statusClass='bg-info'; statusIcon='fa-spinner fa-spin';} // Added more states for spinner
+                        else if(['Disconnected','Rejected','Error','Bind Error','Start Error','Auth Error'].includes(stream.connection_status)){headerClass='bg-danger';statusClass = 'bg-danger'; statusIcon = 'fa-exclamation-triangle';}
+                        const encDisp=(stream.encryption||'none').toUpperCase().replace('_','-'); const passDisp=stream.encryption==='none'?'<span class="text-muted fst-italic">N/A</span>':(stream.passphrase_set?'<span class="badge bg-success">Set</span>':'<span class="badge bg-danger">Missing</span>');
+                        const qosDisp=stream.qos_enabled?'<span class="badge bg-success">Enabled</span>':'<span class="badge bg-secondary">Disabled</span>';
+                        const title=stream.mode==='caller'?`<i class="fas fa-paper-plane"></i> Caller to ${stream.target||'?'}`:`<i class="fas fa-satellite-dish"></i> Listener:${stream.key}`;
+                        const clientLabel=stream.mode==='caller'?'Target':'Client IP'; const clientVal = stream.mode === 'caller' ? (stream.target || 'N/A') : (stream.client_ip || 'None');
+                        const inputTypeDisp=(stream.input_type||'?').replace('_',' ').replace(/\b\w/g,l=>l.toUpperCase()); const srcDisp=stream.source_detail||'N/A';
+                        const smoothDisp = stream.smoothing_latency_ms ? `${stream.smoothing_latency_ms} ms` : 'N/A';
+                        const csrfTokenValue = $('input[name=csrf_token]').val() || '{{ csrf_token() }}';
+                        // Construct Card HTML (Corrected - use defined variables)
+                        const card = `
+                            <div class="col-lg-6 mb-4">
+                                <div class="card stream-card h-100">
+                                    <div class="card-header ${headerClass} text-white">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold">${title}</span>
+                                            <form method="POST" action="/stop_stream/${stream.key}" onsubmit="return confirm('Stop stream ${stream.key}?');" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="${csrfTokenValue}">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Stop Stream ${stream.key}"><i class="fas fa-stop-circle"></i></button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-sm table-borderless small mb-2">
+                                            <tbody>
+                                                <tr><td width="110"><i class="fas fa-sign-in-alt fa-fw"></i> <strong>Input</strong></td><td class="text-break"><b>${inputTypeDisp}:</b> ${srcDisp}</td></tr>
+                                                <tr><td><i class="fas fa-map-marker-alt fa-fw"></i> <strong>${clientLabel}</strong></td><td>${clientVal}</td></tr>
+                                                <tr><td><i class="fas fa-history fa-fw"></i> <strong>SRT Latency</strong></td><td>${stream.latency||'?'} ms</td></tr>
+                                                <tr><td><i class="fas fa-network-wired fa-fw"></i> <strong>Overhead</strong></td><td>${stream.overhead_bandwidth||'?'}%</td></tr>
+                                                <tr><td><i class="fas fa-sliders-h fa-fw"></i> <strong>Smoothing</strong></td><td>${smoothDisp}</td></tr>
+                                                <tr><td><i class="fas fa-lock fa-fw"></i> <strong>Encryption</strong></td><td>${encDisp} (${passDisp})</td></tr>
+                                                <tr><td><i class="fas fa-check-circle fa-fw"></i> <strong>QoS</strong></td><td>${qosDisp}</td></tr>
+                                                <tr><td><i class="fas fa-wifi fa-fw"></i> <strong>Status</strong></td><td><span class="badge ${statusClass}"><i class="fas ${statusIcon} me-1"></i>${stream.connection_status||'?'}</span></td></tr>
+                                                <tr><td><i class="fas fa-hourglass-start fa-fw"></i> <strong>Started</strong></td><td>${stream.start_time||'?'}</td></tr>
+                                            </tbody>
+                                        </table>
+                                        <div class="d-flex mt-auto pt-2 border-top">
+                                            <a href="/stream/${stream.key}" class="btn btn-info btn-sm me-2" title="View Detailed Statistics"><i class="fas fa-chart-line"></i> Details</a>
+                                            <a href="/api/debug/${stream.key}" class="btn btn-secondary btn-sm" target="_blank" title="View Raw Debug Info (JSON)"><i class="fas fa-bug"></i> Debug</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        container.append(card);
+                    }
+                }).fail(function(){console.error("Failed fetch active streams"); container.html('<div class="col-12"><div class="alert alert-danger">Error loading streams.</div></div>');})
+                  .always(function(){setTimeout(function(){$('#refresh-indicator').addClass('d-none');},300);});
+                updateSystemInfo();
+            }
+
+            // --- Initial Load & Intervals ---
+            updateActiveStreams();
+            const refreshInterval = 5000; setInterval(updateActiveStreams, refreshInterval);
+            // Apply network test results
+            function applyNetworkTestResults(){const p=new URLSearchParams(window.location.search);if(p.has('apply_network_test')){const l=p.get('latency'),o=p.get('overhead');if(l&&$('#latency').length)$('#latency').val(l);if(o&&$('#overhead_bandwidth').length){const v=parseInt(o);if(v>=1&&v<=99)$('#overhead_bandwidth').val(v);}if(window.history.replaceState){const u=`${window.location.protocol}//${window.location.host}${window.location.pathname}`;window.history.replaceState({path:u},'',u);}}}applyNetworkTestResults();
+            // formatBytes
+            function formatBytes(b,d=2){if(!b||isNaN(b))return'0 B';const k=1024,m=d<0?0:d,s=['B','KB','MB','GB','TB','PB','EB','ZB','YB'],i=Math.min(Math.floor(Math.log(b)/Math.log(k)),s.length-1);return parseFloat((b/Math.pow(k,i)).toFixed(m))+' '+s[i];}
+
+        }); // End document.ready
+    </script>
+
+</body>
+</html>

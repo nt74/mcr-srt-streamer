@@ -1,0 +1,416 @@
+/* /opt/mcr-srt-streamer/app/static/css/style.css */
+/* Includes Publik Font definitions & SVT Blue, Yellow, Red, Green, Grey, Black palettes */
+/* Updated header color and basic Bootstrap overrides */
+
+/* --- BEGIN Font Definitions --- */
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikRegular.ttf') format('truetype');
+    font-weight: 400; /* Normal */
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikItalic.ttf') format('truetype');
+    font-weight: 400; /* Normal */
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikLight.ttf') format('truetype');
+    font-weight: 300; /* Light */
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikLightItalic.ttf') format('truetype');
+    font-weight: 300; /* Light */
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikSemiBold.ttf') format('truetype');
+    font-weight: 600; /* SemiBold */
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikSemiBoldItalic.ttf') format('truetype');
+    font-weight: 600; /* SemiBold */
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikBold.ttf') format('truetype');
+    font-weight: 700; /* Bold */
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikBoldItalic.ttf') format('truetype');
+    font-weight: 700; /* Bold */
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Publik';
+    src: url('../fonts/PublikBlack.ttf') format('truetype');
+    font-weight: 900; /* Black */
+    font-style: normal;
+    font-display: swap;
+}
+/* --- END Font Definitions --- */
+
+
+:root {
+    /* --- SVT Blue Colors --- */
+    --svt-blue-extralight: #D2E6F5;
+    --svt-blue-light: #7DBEE1;
+    --svt-blue-regular: #2891C8;
+    --svt-blue-dark: #1E69AA;
+    --svt-blue-extradark: #0F418C;
+    --svt-blue-accent: #0091FF;
+
+    /* --- SVT Yellow Colors --- */
+    --svt-yellow-extralight: #FFF0D2;
+    --svt-yellow-light: #FFDC8C;
+    --svt-yellow-regular: #FFC346;
+    --svt-yellow-dark: #EBAA23;
+    --svt-yellow-accent: #FFF000; /* #FFFF00 */
+
+    /* --- SVT Red Colors --- */
+    --svt-red-extralight: #FFD2D7;
+    --svt-red-light: #F0828C;
+    --svt-red-regular: #E13241;
+    --svt-red-dark: #B9232D;
+    --svt-red-accent: #FF4BD8; /* Note: This HEX (#FF4BD8) is Pinkish */
+
+    /* --- SVT Green Colors --- */
+    --svt-green-extralight: #D2EBD2;
+    --svt-green-light: #82C882;
+    --svt-green-regular: #32A532;
+    --svt-green-dark: #23821E;
+    --svt-green-extradark: #0F5A0A;
+    --svt-green-accent: #00C800;
+
+    /* --- SVT Grey/Black Colors --- */
+    --svt-grey-light: #EBEBEB;
+    --svt-grey-regular: #CCCCCC;
+    --svt-grey-dark: #737373;
+    --svt-black-regular: #000000;
+
+    /* --- Theme Mappings (Adjust as per SVT guidelines) --- */
+    --svt-primary: var(--svt-blue-dark);
+    --svt-secondary: var(--svt-grey-regular);   /* UPDATED */
+    --svt-success: var(--svt-green-regular);
+    --svt-info: var(--svt-blue-light);
+    --svt-warning: var(--svt-yellow-regular);
+    --svt-danger: var(--svt-red-regular);
+    --svt-light: var(--svt-grey-light);         /* UPDATED to SVT Light Grey */
+    --svt-dark: var(--svt-grey-dark);           /* UPDATED */
+
+    --svt-header-bg: var(--svt-blue-extradark);
+    --svt-body-bg: var(--svt-grey-light);       /* UPDATED */
+    --svt-default-bg: #ffffff;                  /* Keeping white as default internal bg */
+    --svt-text-light: #FFFFFF;                  /* Keeping white */
+    --svt-text-dark: var(--svt-black-regular);  /* UPDATED */
+    --svt-text-muted: var(--svt-grey-regular);  /* UPDATED */
+
+    /* --- SVT Font --- */
+    --svt-font-family: 'Publik', var(--bs-font-sans-serif);
+
+    /* --- Override Bootstrap Variables --- */
+    --bs-primary: var(--svt-primary);
+    --bs-secondary: var(--svt-secondary);
+    --bs-success: var(--svt-success);
+    --bs-info: var(--svt-info);
+    --bs-warning: var(--svt-warning);
+    --bs-danger: var(--svt-danger);
+    --bs-light: var(--svt-light);
+    --bs-dark: var(--svt-dark);
+    --bs-body-bg: var(--svt-body-bg);
+    --bs-body-font-family: var(--svt-font-family);
+    --bs-body-font-size: 1rem;
+    --bs-body-font-weight: 400;
+    --bs-link-color: var(--svt-primary);
+    --bs-link-hover-color: var(--svt-blue-regular);
+    --bs-body-color: var(--svt-text-dark);
+}
+
+/* --- BEGIN Applied Theme Styles --- */
+body {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+h1, h2, h3, h4, h5, h6, .btn, .nav-link, .form-label, .dropdown-item, .modal-title, .popover-header, .popover-body, .tooltip-inner {
+     font-family: var(--svt-font-family);
+}
+h1, h2, h3, h4, h5, h6 {
+    color: var(--svt-text-dark);
+}
+
+/* Card Headers */
+.card-header {
+     background-color: var(--svt-header-bg);
+     color: var(--svt-text-light);
+     border-bottom-color: rgba(255,255,255, 0.2);
+     border-top-left-radius: 8px;
+     border-top-right-radius: 8px;
+}
+/* Ensure explicit dark text is used for light backgrounds */
+.card-header.bg-primary,
+.card-header.bg-success, /* Now SVT Green */
+.card-header.bg-danger,
+.card-header.bg-dark, /* Now SVT Dark Grey */
+.card-header.bg-secondary /* Now SVT Regular Grey */ {
+    background-color: var(--bs-primary); /* Default to primary header if not overridden */
+    color: var(--svt-text-light) !important;
+    border-bottom-color: rgba(255,255,255, 0.2) !important;
+}
+.card-header.bg-info, /* SVT Light Blue */
+.card-header.bg-warning, /* SVT Yellow */
+.card-header.bg-light /* SVT Light Grey */ {
+   background-color: var(--bs-info); /* Default to info if not overridden */
+   color: var(--svt-text-dark) !important; /* Dark text for light backgrounds */
+   border-bottom-color: rgba(0,0,0, 0.1) !important;
+}
+/* Specific Overrides */
+.card-header.bg-primary { background-color: var(--bs-primary)!important; }
+.card-header.bg-secondary { background-color: var(--bs-secondary)!important; }
+.card-header.bg-success { background-color: var(--bs-success)!important; }
+.card-header.bg-info { background-color: var(--bs-info)!important; }
+.card-header.bg-warning { background-color: var(--bs-warning)!important; }
+.card-header.bg-danger { background-color: var(--bs-danger)!important; }
+.card-header.bg-light { background-color: var(--bs-light)!important; }
+.card-header.bg-dark { background-color: var(--bs-dark)!important; }
+
+
+/* Button Styles */
+.btn-primary {
+    --bs-btn-hover-bg: var(--svt-blue-regular);
+    --bs-btn-hover-border-color: var(--svt-blue-regular);
+    --bs-btn-active-bg: var(--svt-blue-extradark);
+    --bs-btn-active-border-color: var(--svt-blue-extradark);
+}
+.btn-secondary { /* Updated for SVT Grey */
+    --bs-btn-color: var(--svt-text-light);
+    --bs-btn-bg: var(--svt-grey-regular);
+    --bs-btn-border-color: var(--svt-grey-regular);
+    --bs-btn-hover-color: var(--svt-text-light);
+    --bs-btn-hover-bg: var(--svt-grey-dark); /* Darker Grey for hover */
+    --bs-btn-hover-border-color: var(--svt-grey-dark);
+    --bs-btn-active-color: var(--svt-text-light);
+    --bs-btn-active-bg: var(--svt-grey-dark);
+    --bs-btn-active-border-color: #5A5A5A; /* Even darker */
+    --bs-btn-disabled-color: var(--svt-text-light);
+    --bs-btn-disabled-bg: var(--svt-grey-regular);
+    --bs-btn-disabled-border-color: var(--svt-grey-regular);
+}
+.btn-success {
+    --bs-btn-color: var(--svt-text-light); /* Assuming light text works on regular green */
+    --bs-btn-bg: var(--svt-green-regular);
+    --bs-btn-border-color: var(--svt-green-regular);
+    --bs-btn-hover-color: var(--svt-text-light);
+    --bs-btn-hover-bg: var(--svt-green-light); /* Lighter green for hover */
+    --bs-btn-hover-border-color: var(--svt-green-light);
+    --bs-btn-focus-shadow-rgb: 50,165,50; /* RGB from #32A532 */
+    --bs-btn-active-color: var(--svt-text-light);
+    --bs-btn-active-bg: var(--svt-green-dark); /* Darker green for active */
+    --bs-btn-active-border-color: var(--svt-green-dark);
+    --bs-btn-disabled-color: var(--svt-text-light);
+    --bs-btn-disabled-bg: var(--svt-green-regular);
+    --bs-btn-disabled-border-color: var(--svt-green-regular);
+ }
+.btn-info {
+    --bs-btn-color: var(--svt-text-dark);
+    --bs-btn-hover-color: var(--svt-text-dark);
+    --bs-btn-active-color: var(--svt-text-dark);
+    --bs-btn-hover-bg: var(--svt-blue-extralight);
+    --bs-btn-hover-border-color: var(--svt-blue-extralight);
+}
+.btn-warning {
+    --bs-btn-color: var(--svt-text-dark);
+    --bs-btn-hover-color: var(--svt-text-dark);
+    --bs-btn-active-color: var(--svt-text-dark);
+    --bs-btn-hover-bg: var(--svt-yellow-light);
+    --bs-btn-hover-border-color: var(--svt-yellow-light);
+    --bs-btn-active-bg: var(--svt-yellow-dark);
+    --bs-btn-active-border-color: var(--svt-yellow-dark);
+}
+ .btn-danger {
+    --bs-btn-color: var(--svt-text-light);
+    --bs-btn-hover-color: var(--svt-text-light);
+    --bs-btn-active-color: var(--svt-text-light);
+    --bs-btn-hover-bg: var(--svt-red-light);
+    --bs-btn-hover-border-color: var(--svt-red-light);
+    --bs-btn-active-bg: var(--svt-red-dark);
+    --bs-btn-active-border-color: var(--svt-red-dark);
+ }
+.btn-light { /* Updated for SVT Light Grey */
+    --bs-btn-color: var(--svt-text-dark);
+    --bs-btn-bg: var(--svt-grey-light);
+    --bs-btn-border-color: var(--svt-grey-light);
+    --bs-btn-hover-color: var(--svt-text-dark);
+    --bs-btn-hover-bg: #BDBDBD; /* Slightly darker grey for hover */
+    --bs-btn-hover-border-color: #BDBDBD;
+    --bs-btn-active-color: var(--svt-text-dark);
+    --bs-btn-active-bg: var(--svt-grey-regular);
+    --bs-btn-active-border-color: var(--svt-grey-regular);
+    --bs-btn-disabled-color: var(--svt-text-dark);
+    --bs-btn-disabled-bg: var(--svt-grey-light);
+    --bs-btn-disabled-border-color: var(--svt-grey-light);
+}
+.btn-dark { /* Updated for SVT Dark Grey */
+    --bs-btn-color: var(--svt-text-light);
+    --bs-btn-bg: var(--svt-grey-dark);
+    --bs-btn-border-color: var(--svt-grey-dark);
+    --bs-btn-hover-color: var(--svt-text-light);
+    --bs-btn-hover-bg: #5A5A5A; /* Darker */
+    --bs-btn-hover-border-color: #5A5A5A;
+    --bs-btn-active-color: var(--svt-text-light);
+    --bs-btn-active-bg: #484848; /* Even darker */
+    --bs-btn-active-border-color: #484848;
+    --bs-btn-disabled-color: var(--svt-text-light);
+    --bs-btn-disabled-bg: var(--svt-grey-dark);
+    --bs-btn-disabled-border-color: var(--svt-grey-dark);
+}
+
+
+/* Status Badge Styles */
+/* Adjust text color based on new background */
+.badge.bg-warning,
+.badge.bg-info,
+.badge.bg-light {
+    color: var(--svt-text-dark) !important;
+}
+.badge.bg-primary,
+.badge.bg-success,
+.badge.bg-danger,
+.badge.bg-secondary,
+.badge.bg-dark {
+    color: var(--svt-text-light) !important;
+}
+
+/* --- END Applied Theme Styles --- */
+
+
+/* --- BEGIN Original style.css content (Merged/Adjusted) --- */
+
+/* Network Test Page Header (Specific override) */
+.header {
+    background-color: var(--svt-blue-dark) !important; /* Use SVT Dark Blue */
+    color: var(--svt-text-light) !important;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+.header h1 {
+     color: var(--svt-text-light) !important;
+}
+.header .btn-outline-light { } /* Keep default */
+
+/* Card Styles */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    border-color: var(--bs-border-color);
+}
+
+/* Stream Card Styles */
+.stream-card {
+    transition: transform 0.3s;
+}
+.stream-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Progress Bar Styles */
+.progress {
+    height: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+}
+.progress-bar {
+    transition: width 0.5s;
+}
+
+/* Stat Circle Style */
+.stat-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 8px solid #e9ecef; /* Consider using var(--bs-border-color) */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 15px auto;
+    transition: border-color 0.5s;
+}
+.stat-value {
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+}
+.stat-unit {
+    font-size: 14px;
+    color: var(--svt-text-muted);
+}
+
+/* Media Info Styles */
+.media-info {
+    white-space: pre-wrap;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    max-height: 600px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+    font-family: var(--bs-font-monospace);
+}
+
+/* Debug Info Styles */
+#debug-content {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.85rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .stat-circle {
+        width: 80px;
+        height: 80px;
+        border-width: 5px;
+    }
+    .stat-value {
+        font-size: 20px;
+    }
+    .stat-unit {
+        font-size: 12px;
+    }
+    h1 {
+        font-size: calc(1.3rem + .6vw);
+    }
+    .header img {
+        height: 30px !important;
+        margin-right: 10px !important;
+    }
+}
+/* --- END Original style.css content --- */
