@@ -1,4 +1,10 @@
 # /opt/mcr-srt-streamer/app/stream_manager.py
+# Based on user-provided version from response #46.
+# Includes fix for get_state() unpacking in get_stream_statistics.
+# Includes caller status detection based on PLAYING state transition in _on_bus_message.
+# Includes get_active_streams method.
+# FIX: Removed incorrect file path format check in start_stream.
+# FIX: Conditional srtsink sync AND wait-for-connection based on input_type/mode.
 
 import gi
 gi.require_version('Gst', '1.0')
@@ -94,14 +100,11 @@ class StreamManager:
 
     # --- GStreamer Bus/Signal Handlers ---
     def _on_bus_message(self, bus, message, key):
-        """Handles messages posted on the pipeline's bus."""
         t = message.type
         with self.lock:
             stream_info = self.active_streams.get(key)
             if not stream_info: return True
-
             mode = stream_info.get('mode', '?'); config_dict = stream_info.get('config', {}); input_type = config_dict.get('input_type', '?'); target_info = stream_info.get('target', '?'); target = f" to {target_info}" if mode == 'caller' else ''; pipeline_description = f"stream {key} ({mode}{target}, input:{input_type})"
-
             if t == Gst.MessageType.STATE_CHANGED:
                 if message.src == stream_info.get('pipeline'):
                     old_state, new_state, pending_state = message.parse_state_changed()
@@ -156,13 +159,12 @@ class StreamManager:
                 self.active_streams[key].setdefault('connection_history', []).append({ 'event': 'rejected', 'time': time.time(), 'ip': ip, 'reason': reason })
             else: self.logger.warning(f"SRT signal 'caller-rejected' received for non-existent stream key {key}")
 
-    # --- start_stream ---
+    # --- start_stream (Conditional sync AND wait-for-connection) ---
     def start_stream(self, config, use_target_port_as_key=False):
-        # Code from response #23 (includes parse_launch error handling)
         key = None; pipeline = None; existing_pipeline = None; pipeline_input_str = None; srt_uri = ""; pipeline_str = ""; DEFAULT_MULTICAST_INTERFACE = "vlan2"
         try:
             mode = config.get('mode', 'listener'); target_port_config = config.get('target_port'); listener_port_config = config.get('port')
-            if mode == 'caller': key = self._validate_target_port(target_port_config) # Using target port as key
+            if mode == 'caller': key = self._validate_target_port(target_port_config)
             else: key = self._validate_listener_port(listener_port_config)
 
             with self.lock:
@@ -172,11 +174,11 @@ class StreamManager:
 
             input_type = config.get('input_type', 'multicast'); self.logger.info(f"Starting stream {key} with input type: {input_type}")
             if input_type == 'file':
-                file_path = config.get('file_path'); media_dir = os.path.abspath(self.media_folder); base_filename = os.path.basename(file_path)
-                if not (file_path and isinstance(file_path, str)): raise ValueError("Missing or invalid 'file_path'.")
-                if base_filename != file_path: raise ValueError("Invalid file path format provided.")
-                abs_file_path = os.path.abspath(os.path.join(media_dir, base_filename))
-                if not abs_file_path.startswith(media_dir + os.sep): raise ValueError("File path is outside allowed media directory.")
+                file_path_from_config = config.get('file_path')
+                if not (file_path_from_config and isinstance(file_path_from_config, str)): raise ValueError("Missing or invalid 'file_path' in config.")
+                media_dir = os.path.abspath(self.media_folder); base_filename = os.path.basename(file_path_from_config)
+                abs_file_path = os.path.abspath(os.path.join(media_dir, base_filename)) # Construct absolute path
+                if not abs_file_path.startswith(media_dir + os.sep): raise ValueError("File path is outside allowed media directory.") # Security check
                 if not os.path.isfile(abs_file_path): raise FileNotFoundError(f"Media file not found: {abs_file_path}")
                 if not abs_file_path.lower().endswith('.ts'): raise ValueError("Only .ts files supported.")
                 pipeline_input_str = f'filesrc location="{abs_file_path}"'; self.logger.info(f"Using file source: {abs_file_path}")
@@ -204,7 +206,15 @@ class StreamManager:
             else: srt_uri = f"srt://0.0.0.0:{listener_port_for_uri}?{'&'.join(srt_params)}"
             if not srt_uri: raise ValueError("Internal error: Failed to construct a valid SRT URI.")
 
-            pipeline_str = ( f'{pipeline_input_str} ! ' f'tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_latency_us} parse-private-sections=true ! ' f'srtsink name="{sink_name}" uri="{srt_uri}" async=false sync=false wait-for-connection=false' )
+            # *** Set srtsink parameters conditionally ***
+            srtsink_sync_param = 'true' if input_type == 'file' else 'false'
+            srtsink_wait_param = 'true' if mode == 'listener' else 'false' # Wait only if listener
+
+            pipeline_str = (
+                f'{pipeline_input_str} ! '
+                f'tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_latency_us} parse-private-sections=true ! '
+                f'srtsink name="{sink_name}" uri="{srt_uri}" async=false sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}' # Use conditional params
+            )
             pipeline_str = " ".join(pipeline_str.split()); self.logger.debug(f"Constructed pipeline string {key}: {pipeline_str}")
 
             self.logger.info(f"Attempting to parse pipeline for stream {key} (Smoothing:{smoothing_latency_us}us)")
@@ -252,7 +262,6 @@ class StreamManager:
 
     # --- stop_stream ---
     def stop_stream(self, stream_key):
-        # Code from response #23 (uses idle_add for safety)
         pipeline_to_stop = None; bus_to_clear = None; key = -1
         try:
             try: key = int(stream_key)
@@ -377,55 +386,21 @@ class StreamManager:
         except ValueError as e: self.logger.error(f"Get stats validation error: {e}"); return {'error': f"Invalid stream key: {stream_key}"}
         except Exception as e: self.logger.error(f"Unexpected error getting stats for {stream_key}: {e}", exc_info=True); return {'error': f"Unexpected error retrieving stats: {str(e)}"}
 
-    # --- get_active_streams (Ensuring this method exists) ---
+    # --- get_active_streams ---
     def get_active_streams(self):
         """Returns a dictionary of all active streams with basic information."""
         try:
             with self.lock:
                 if not self.active_streams: return {}
                 streams = {}
-                now = time.time() # Get current time once
+                now = time.time()
                 for key, stream_info in self.active_streams.items():
-                    mode = stream_info.get('mode', 'unknown')
-                    config = stream_info.get('config', {})
-                    status = stream_info.get('connection_status', 'Unknown')
-                    start_time = stream_info.get('start_time', now) # Use now if start_time missing
-                    client_addr = stream_info.get('connected_client')
-                    target = stream_info.get('target') if mode == 'caller' else None
-                    input_type = config.get('input_type', 'unknown'); source_detail = os.path.basename(config.get('file_path','N/A')) if input_type == 'file' else (f"{config.get('multicast_address','?')}:{config.get('multicast_port','?')}" if input_type == 'multicast' else 'N/A')
-
-                    # Handle timeout for 'Connecting...' callers here as well
-                    if mode == 'caller' and status == 'Connecting...' and (now - start_time) > 30: # 30 second timeout
-                         status = 'Connection Failed' # Update status for the copy
-                         # Optionally update the main dict too, but needs care with locking/loops
-                         # self.logger.warning(f"Caller {key} timed out in get_active_streams.")
-                         # stream_info['connection_status'] = status # Update original dict if needed
-
-                    stream_data = {
-                        'key': key, # Include the key itself
-                        'mode': mode,
-                        'connection_status': status, # Use potentially updated status
-                        'uptime': self._format_uptime(now - start_time),
-                        'input_type': input_type,
-                        'source_detail': source_detail,
-                        'latency': config.get('latency', '?'),
-                        'overhead_bandwidth': config.get('overhead_bandwidth', '?'),
-                        'encryption': config.get('encryption', 'none'),
-                        'passphrase_set': bool(config.get('passphrase')) and config.get('encryption', 'none') != 'none',
-                        'qos_enabled': config.get('qos', False),
-                        'smoothing_latency_ms': config.get('smoothing_latency_ms', '?'),
-                        'port': config.get('port') if mode == 'listener' else config.get('target_port'),
-                        'target': target,
-                        'client_ip': self._extract_ip_from_socket_address(client_addr), # Use helper, handles None
-                        'srt_uri': stream_info.get('srt_uri', ''), # Include SRT URI
-                        'start_time': time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(start_time)) if start_time else 'N/A' # Formatted start time
-                    }
-                    streams[key] = self._sanitize_for_json(stream_data) # Sanitize final dict
-            # self.logger.debug(f"Returning info for {len(streams)} active streams.")
+                    mode = stream_info.get('mode', 'unknown'); config = stream_info.get('config', {}); status = stream_info.get('connection_status', 'Unknown'); start_time = stream_info.get('start_time', now); client_addr = stream_info.get('connected_client'); target = stream_info.get('target') if mode == 'caller' else None; input_type = config.get('input_type', 'unknown'); source_detail = os.path.basename(config.get('file_path','N/A')) if input_type == 'file' else (f"{config.get('multicast_address','?')}:{config.get('multicast_port','?')}" if input_type == 'multicast' else 'N/A')
+                    if mode == 'caller' and status == 'Connecting...' and (now - start_time) > 30: status = 'Connection Failed'
+                    stream_data = { 'key': key, 'mode': mode, 'connection_status': status, 'uptime': self._format_uptime(now - start_time), 'input_type': input_type, 'source_detail': source_detail, 'latency': config.get('latency', '?'), 'overhead_bandwidth': config.get('overhead_bandwidth', '?'), 'encryption': config.get('encryption', 'none'), 'passphrase_set': bool(config.get('passphrase')) and config.get('encryption', 'none') != 'none', 'qos_enabled': config.get('qos', False), 'smoothing_latency_ms': config.get('smoothing_latency_ms', '?'), 'port': config.get('port') if mode == 'listener' else config.get('target_port'), 'target': target, 'client_ip': self._extract_ip_from_socket_address(client_addr), 'srt_uri': stream_info.get('srt_uri', ''), 'start_time': time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(start_time)) if start_time else 'N/A' }
+                    streams[key] = self._sanitize_for_json(stream_data)
             return streams
-        except Exception as e:
-            self.logger.error(f"Error retrieving active streams: {str(e)}", exc_info=True)
-            return {'error': f"Failed to retrieve active streams: {str(e)}"}
+        except Exception as e: self.logger.error(f"Error retrieving active streams: {str(e)}", exc_info=True); return {'error': f"Failed to retrieve active streams: {str(e)}"}
 
     # --- _format_uptime ---
     def _format_uptime(self, seconds):
@@ -433,13 +408,13 @@ class StreamManager:
             seconds_int = int(seconds);
             if seconds_int < 0: return "0s"
             days, rem_d = divmod(seconds_int, 86400); hrs, rem_h = divmod(rem_d, 3600); mins, secs = divmod(rem_h, 60)
-            parts = [f"{d}d" for d in [days] if d > 0] + [f"{h}h" for h in [hrs] if h > 0] + [f"{m}m" for m in [mins] if m > 0] + [f"{s}s" for s in [secs] if s >= 0 or not parts] # Show seconds >= 0
+            parts = [f"{d}d" for d in [days] if d > 0] + [f"{h}h" for h in [hrs] if h > 0] + [f"{m}m" for m in [mins] if m > 0] + [f"{s}s" for s in [secs] if s >= 0 or not parts]
             return " ".join(parts) if parts else "0s"
         except Exception as e: self.logger.error(f"Error formatting uptime: {e}"); return "Error"
 
     # --- get_file_info ---
     def get_file_info(self, file_path):
-        # Based on user's current version, assumes path validated by caller
+        # Assumes path validated by caller
         abs_file_path = file_path
         try:
             cmd = ['ffprobe', '-v', 'error', '-show_format', '-show_streams', '-of', 'json', abs_file_path]
@@ -459,7 +434,7 @@ class StreamManager:
 
     # --- get_debug_info ---
     def get_debug_info(self, stream_key):
-        # Based on user's current version, includes get_state fix
+        # Includes get_state fix
         si_copy=None; pipeline=None
         try:
             key=int(stream_key)
