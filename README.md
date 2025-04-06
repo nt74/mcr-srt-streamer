@@ -54,7 +54,7 @@ The core functionality uses GStreamer pipelines (e.g., `filesrc ! tsparse ! srts
     * Detailed stream view with live-updating charts (Chart.js) for Bitrate/RTT/Loss history, packet counters, connection status (incl. client IP for listeners), and debug info API.
 * **Media Management:**
     * AJAX media browser modal lists `.ts` files from the `media/` folder.
-    * Media Info page uses `ffprobe` or `mediainfo` for file details.
+    * Media Info page uses `mediainfo` for file details.
 * **Web Interface:**
     * Built with Bootstrap 5, jQuery, Chart.js, Font Awesome (all served locally from `app/static/`).
     * Uses custom SVT color theme defined in `app/static/css/style.css`.
