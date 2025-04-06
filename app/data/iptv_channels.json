@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Dummy Channel 1",
+    "address": "239.1.1.1",
+    "port": 1234,
+    "protocol": "udp",
+    "source_ip": "10.0.0.1"
+  },
+  {
+    "name": "Dummy Channel 2",
+    "address": "239.1.1.2",
+    "port": 1234,
+    "protocol": "udp"
+    // source_ip is optional
+  }
+]
