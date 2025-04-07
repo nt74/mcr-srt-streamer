@@ -52,8 +52,15 @@
                     {# Input Type Selection (Default Multicast) #}
                     <div class="mb-3">
                         {{ form.input_type.label(class="form-label") }}
-                        {{ form.input_type(class="form-select" + (' is-invalid' if form.input_type.errors else ''), id="input_type_caller") }}
-                        <div id="inputTypeHelpCaller" class="form-text">Choose input: Multicast UDP or local TS File.</div>
+                        {# *** MODIFIED: Added colorbar options *** #}
+                        <select class="form-select{{ ' is-invalid' if form.input_type.errors else '' }}" id="input_type_caller" name="input_type">
+                            <option value="multicast" {% if form.input_type.data == 'multicast' %}selected{% endif %}>Multicast UDP</option>
+                            <option value="file" {% if form.input_type.data == 'file' %}selected{% endif %}>File</option>
+                            <option value="colorbar_720p50" {% if form.input_type.data == 'colorbar_720p50' %}selected{% endif %}>Colorbars 720p50</option>
+                            <option value="colorbar_1080i50" {% if form.input_type.data == 'colorbar_1080i50' %}selected{% endif %}>Colorbars 1080i50</option>
+                        </select>
+                         {# *** END MODIFICATION *** #}
+                        <div id="inputTypeHelpCaller" class="form-text">Choose input: Multicast UDP, local TS File, or Colorbar Generator.</div>
                         {% if form.input_type.errors %} <div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div> {% endif %}
                     </div>
 
@@ -181,7 +188,6 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     {# *** END MODIFIED ASSETS *** #}
 
-    {# Javascript remains the same #}
     <script>
         $(document).ready(function() {
             // Tooltips
@@ -193,24 +199,28 @@
             // Encryption Toggle
             $('#encryption_caller').change(function() { $('.caller-encryption-options').toggle($(this).val() !== 'none'); }).trigger('change');
 
-            // *** UPDATED: Input Type Visibility Toggle (Includes Interface Field) ***
+            // *** UPDATED: Input Type Visibility Toggle (Caller) ***
             const inputTypeSelectCaller = $('#input_type_caller');
             const fileGroupCaller = $('#file-input-group-caller');
             const multicastGroupCaller = $('#multicast-input-group-caller'); // This div now contains channel AND interface
 
             function toggleInputFieldsCaller() {
                 const selectedType = inputTypeSelectCaller.val();
-                fileGroupCaller.addClass('hidden-input');     // Hide by default
-                multicastGroupCaller.addClass('hidden-input'); // Hide by default
+                // Hide all conditional groups first
+                fileGroupCaller.addClass('hidden-input');
+                multicastGroupCaller.addClass('hidden-input');
 
+                // Show the relevant group
                 if (selectedType === 'file') {
                     fileGroupCaller.removeClass('hidden-input');
                 } else if (selectedType === 'multicast') {
                     multicastGroupCaller.removeClass('hidden-input'); // Show the whole multicast group div
+                } else if (selectedType.startsWith('colorbar_')) {
+                     // No specific group to show for colorbars, file and multicast remain hidden
                 }
             }
             inputTypeSelectCaller.on('change', toggleInputFieldsCaller);
-            toggleInputFieldsCaller(); // Set initial state based on form default
+            toggleInputFieldsCaller(); // Set initial state based on current value
             // --- *** END: Input Type Visibility Toggle (Caller) *** ---
 
             // --- Media Browser Logic (Caller Page) ---

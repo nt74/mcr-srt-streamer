@@ -11,6 +11,5 @@
     "address": "239.1.1.2",
     "port": 1234,
     "protocol": "udp"
-    // source_ip is optional
   }
 ]

@@ -72,8 +72,15 @@
                             {# Input Type Selection (Default Multicast) #}
                             <div class="mb-3">
                                 {{ form.input_type.label(class="form-label") }}
-                                {{ form.input_type(class="form-select" + (' is-invalid' if form.input_type.errors else ''), id="input_type_listener") }}
-                                <div id="inputTypeHelp" class="form-text">Choose input: Multicast UDP or local TS File.</div>
+                                {# *** MODIFIED: Added colorbar options *** #}
+                                <select class="form-select{{ ' is-invalid' if form.input_type.errors else '' }}" id="input_type_listener" name="input_type">
+                                    <option value="multicast" {% if form.input_type.data == 'multicast' %}selected{% endif %}>Multicast UDP</option>
+                                    <option value="file" {% if form.input_type.data == 'file' %}selected{% endif %}>File</option>
+                                    <option value="colorbar_720p50" {% if form.input_type.data == 'colorbar_720p50' %}selected{% endif %}>Colorbars 720p50</option>
+                                    <option value="colorbar_1080i50" {% if form.input_type.data == 'colorbar_1080i50' %}selected{% endif %}>Colorbars 1080i50</option>
+                                </select>
+                                {# *** END MODIFICATION *** #}
+                                <div id="inputTypeHelp" class="form-text">Choose input: Multicast UDP, local TS File, or Colorbar Generator.</div>
                                 {% if form.input_type.errors %} <div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div> {% endif %}
                             </div>
 
@@ -91,7 +98,7 @@
                             </div>
 
                             {# Conditional Multicast Input Group (Includes Interface Dropdown) #}
-                             <div class="mb-3" id="multicast-input-group-listener"> {# Start shown #}
+                             <div class="mb-3 hidden-input" id="multicast-input-group-listener"> {# Start hidden by default, JS will show #}
                                 <div class="row">
                                      <div class="col-md-7">
                                           {{ form.multicast_channel.label(class="form-label") }}
@@ -218,7 +225,7 @@
              </div>
         </div>
 
-        {# Active Streams Section (JS updated) #}
+        {# Active Streams Section (JS updated below) #}
         <h2 class="mb-3"> <i class="fas fa-broadcast-tower"></i> Active Streams <small class="text-muted fs-6">(Updates every 5s)</small> <span id="refresh-indicator" class="spinner-border spinner-border-sm text-primary ms-2 d-none" role="status" aria-hidden="true"></span> </h2>
         <div class="row" id="active-streams-container">
             {# Cards dynamically inserted here by JS #}
@@ -250,7 +257,6 @@
     {# Chart.js not needed on this page directly #}
     {# *** END MODIFIED ASSETS *** #}
 
-    {# Javascript remains the same #}
     <script>
         $(document).ready(function() {
             // Tooltips
@@ -260,21 +266,28 @@
             // --- Listener Form Specific Logic ---
             $('#encryption_listener').change(function() { $('.listener-encryption-options').toggle($(this).val() !== 'none'); }).trigger('change');
 
-            // *** UPDATED: Input Type Visibility Toggle (Handles Interface Field) ***
+            // *** UPDATED: Input Type Visibility Toggle (Handles Interface Field & Colorbars) ***
             const inputTypeSelect = $('#input_type_listener');
             const fileGroup = $('#file-input-group-listener');
             const multicastGroup = $('#multicast-input-group-listener');
-            // Assume multicast_interface field is within multicastGroup
 
             function toggleInputFields() {
                 const selectedType = inputTypeSelect.val();
-                fileGroup.addClass('hidden-input');     // Hide by default
-                multicastGroup.addClass('hidden-input'); // Hide by default
-                if (selectedType === 'file') { fileGroup.removeClass('hidden-input'); }
-                else if (selectedType === 'multicast') { multicastGroup.removeClass('hidden-input'); }
+                // Hide all conditional groups first
+                fileGroup.addClass('hidden-input');
+                multicastGroup.addClass('hidden-input');
+
+                // Show the relevant group
+                if (selectedType === 'file') {
+                    fileGroup.removeClass('hidden-input');
+                } else if (selectedType === 'multicast') {
+                    multicastGroup.removeClass('hidden-input');
+                } else if (selectedType.startsWith('colorbar_')) {
+                    // No specific group to show for colorbars, file and multicast remain hidden
+                }
             }
             inputTypeSelect.on('change', toggleInputFields);
-            toggleInputFields(); // Set initial state based on default ('multicast')
+            toggleInputFields(); // Set initial state based on current value
             // --- *** END: Input Type Visibility Toggle *** ---
 
             // --- Media Browser Logic ---
@@ -316,7 +329,14 @@
                         const qosDisp=stream.qos_enabled?'<span class="badge bg-success">Enabled</span>':'<span class="badge bg-secondary">Disabled</span>';
                         const title=stream.mode==='caller'?`<i class="fas fa-paper-plane"></i> Caller to ${stream.target||'?'}`:`<i class="fas fa-satellite-dish"></i> Listener:${stream.key}`;
                         const clientLabel=stream.mode==='caller'?'Target':'Client IP'; const clientVal = stream.mode === 'caller' ? (stream.target || 'N/A') : (stream.client_ip || 'None');
-                        const inputTypeDisp=(stream.input_type||'?').replace('_',' ').replace(/\b\w/g,l=>l.toUpperCase()); const srcDisp=stream.source_detail||'N/A';
+                        // *** MODIFIED: Handle Colorbar display ***
+                        let inputTypeDisp = (stream.input_type||'?').replace('_',' ').replace(/\b\w/g,l=>l.toUpperCase());
+                        let srcDisp = stream.source_detail||'N/A';
+                        if (stream.input_type === 'colorbar') {
+                            inputTypeDisp = 'Colorbar'; // Display cleaner name
+                            srcDisp = stream.config.colorbar_resolution || 'Unknown Res'; // Show resolution instead of path/mcast
+                        }
+                        // *** END MODIFICATION ***
                         const smoothDisp = stream.smoothing_latency_ms ? `${stream.smoothing_latency_ms} ms` : 'N/A';
                         const csrfTokenValue = $('input[name=csrf_token]').val() || '{{ csrf_token() }}';
                         // Construct Card HTML (Corrected - use defined variables)

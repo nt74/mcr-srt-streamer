@@ -2,9 +2,9 @@
 
 ## Description
 
-`mcr-srt-streamer` is a tool for testing SRT (Secure Reliable Transport) listeners and callers, optimized for professional broadcast workflows (e.g., DVB transport streams). Built with Python, Flask, GStreamer, and Bootstrap 5 (with SVT color theme), it provides a web interface to manage and monitor multiple SRT streams originating from local Transport Stream (`.ts`) files or UDP multicast inputs. 
+`mcr-srt-streamer` is a tool for testing SRT (Secure Reliable Transport) listeners and callers, optimized for professional broadcast workflows (e.g., DVB transport streams). Built with Python, Flask, GStreamer, and Bootstrap 5 (with SVT color theme), it provides a web interface to manage and monitor multiple SRT streams originating from local Transport Stream (`.ts`) files, UDP multicast inputs, or internally generated test patterns.
 
-The application configures GStreamer pipelines (`filesrc/udpsrc ! tsparse ! srtsink`) for robust TS-over-SRT streaming and includes integrated network testing tools (`ping`, optionally `iperf3`) to recommend optimal SRT parameters (Latency, Overhead) derived from the Haivision SRT Deployment Guide. The interface is implemented with Bootstrap 5, jQuery, and Chart.js, designed for air-gapped or firewall-restricted operation with no external CDN dependencies.
+The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! ... ! srtsink`) for robust TS-over-SRT streaming and includes integrated network testing tools (`ping`, optionally `iperf3`) to recommend optimal SRT parameters (Latency, Overhead) derived from the Haivision SRT Deployment Guide. The interface is implemented with Bootstrap 5, jQuery, and Chart.js, designed for air-gapped or firewall-restricted operation with no external CDN dependencies.
 
 ---
 
@@ -12,136 +12,136 @@ The application configures GStreamer pipelines (`filesrc/udpsrc ! tsparse ! srts
 
 ### Streaming
 
-- **Multi-Stream Hosting:** run multiple concurrent SRT streams (default simultaneous streams limit configurable).
-  
-- **Listener and Caller Modes:** launch streams as SRT Listener (server) or Caller (client) with easy web configuration.
-  
-- **Multiple Input Sources:**
-  - **File:** stream local `.ts` files from the `media/` directory.
-  - **UDP Multicast:** ingest streams from IPTV multicast sources declared in `app/data/iptv_channels.json`, with selectable network interface (`Auto` chooses OS default).
+-   **Multi-Stream Hosting:** run multiple concurrent SRT streams (default simultaneous streams limit configurable).
 
-- **GStreamer Pipeline Details:**
-  - Inputs from local files or multicast via `filesrc` or `udpsrc`.
-  - Transport Stream parsing via `tsparse` with:
-    - timestamps enabled (`set-timestamps=true`)
-    - DVB alignment (`alignment=7`)
-    - configurable smoothing latency (to reduce PCR jitter)
-  - SRT transmission via `srtsink` with:
-    - adjustable latency (20-8000ms)
-    - bandwidth overhead (1-99%)
-    - optional encryption: AES-128 or AES-256 (10-79 character passphrase)
-    - DVB-specific optimized parameters (large buffers, `tlpktdrop`, NAK tuning), configurable in `app/dvb_config.py`
-    - quality-of-service DSCP flag (`qos=true|false`)
-  
-- **Detailed DVB Compliance:** Default pipeline settings and parameters fine-tuned for broadcast/DVB workflows.
+-   **Listener and Caller Modes:** launch streams as SRT Listener (server) or Caller (client) with easy web configuration.
 
+-   **Multiple Input Sources:**
+    -   **File:** stream local `.ts` files from the `media/` directory.
+    -   **UDP Multicast:** ingest streams from IPTV multicast sources declared in `app/data/iptv_channels.json`, with selectable network interface (`Auto` chooses OS default).
+    -   **Colorbar Generator:** Stream internally generated 720p50 or 1080i50 PAL color bars (SMPTE pattern) with a 1000Hz sine audio tone, suitable for testing SRT links without an external source.
+
+-   **GStreamer Pipeline Details:**
+    -   Inputs from local files or multicast via `filesrc` or `udpsrc`. For Colorbars, `videotestsrc` and `audiotestsrc` are used, outputting to an internal UDP multicast relay.
+    -   Transport Stream parsing via `tsparse` (for file/multicast/colorbar inputs before SRT sink) with:
+        -   timestamps enabled (`set-timestamps=true`)
+        -   DVB alignment (`alignment=7`)
+        -   configurable smoothing latency (to reduce PCR jitter, mainly for file/multicast)
+    -   **Colorbar Generation:** Uses `videotestsrc` (pattern smpte100) and `audiotestsrc` (sine wave 1000Hz) for test signals. Audio is encoded to AAC, prioritizing `fdkaacenc` if available on the system, otherwise falling back to `voaacenc`. Video is encoded using `x264enc`. The generated streams are multiplexed into an MPEG-TS stream before being sent via SRT (using an internal UDP multicast relay for better compatibility).
+    -   SRT transmission via `srtsink` with:
+        -   adjustable latency (20-8000ms)
+        -   bandwidth overhead (1-99%)
+        -   optional encryption: AES-128 or AES-256 (10-79 character passphrase)
+        -   DVB-specific optimized parameters (large buffers, `tlpktdrop`, NAK tuning), configurable in `app/dvb_config.py`
+        -   quality-of-service DSCP flag (`qos=true|false`)
+
+-   **Detailed DVB Compliance:** Default pipeline settings and parameters fine-tuned for broadcast/DVB workflows.
 
 ### Network Testing & Recommendations
 
-- **Configurable Network Test Mechanisms:**  
-  Controlled via environment variable `NETWORK_TEST_MECHANISM`, defaulting to `ping_only`.
+-   **Configurable Network Test Mechanisms:**
+    Controlled via environment variable `NETWORK_TEST_MECHANISM`, defaulting to `ping_only`.
 
-  - **`ping_only` mode (default):**
+    -   **`ping_only` mode (default):**
 
-    - Uses a list of global and regional iperf3 servers (`app/data/iperf3_export_servers.json`), but performs only ICMP `ping` to assess RTT.
-    - Estimates packet loss for recommendations with a fixed fallback loss rate (`ASSUMED_LOSS_FOR_TCP_FALLBACK`, default 7%).
-    - Provides latency and overhead suggestions based on Haivision Guide formulas using RTT + fixed loss.
-    - Useful in firewall-restricted environments where UDP tests are blocked or `iperf3` is not available.
-  
-  - **`iperf` mode:**
-    
-    - Requires optional iperf3 binary and configuration of a background server checking service (details below).
-    - Prioritizes a pre-filtered safe list of UDP-capable servers (`app/data/udp_safe_servers.json`), generated by running `test_iperf_servers.py` regularly via systemd timer.
-    - Performs `ping` + UDP `iperf3` tests to directly measure RTT, bandwidth, loss, jitter.
-    - Provides more accurate SRT recommendations derived from measured stats.
-    - Suitable when UDP tests to internet servers are feasible.
-  
-  - **In Both Modes:**
-    - GeoIP is used to choose closer servers.
-    - Tests available: Closest, Regional, or Manual (user supplies server).
-    - Results auto-fill form fields with suggested latency & overhead for starting new streams.
-  
-- **System Info Dashboard:** host stats including CPU, RAM, disk, IP, uptime, user.
+        -   Uses a list of global and regional iperf3 servers (`app/data/iperf3_export_servers.json`), but performs only ICMP `ping` to assess RTT.
+        -   Estimates packet loss for recommendations with a fixed fallback loss rate (`ASSUMED_LOSS_FOR_TCP_FALLBACK`, default 7%).
+        -   Provides latency and overhead suggestions based on Haivision Guide formulas using RTT + fixed loss.
+        -   Useful in firewall-restricted environments where UDP tests are blocked or `iperf3` is not available.
 
-- **Stream Status:** live updates with:
-  - Real-time charts for bitrate, RTT, loss.
-  - SRT packet statistics, counters.
-  - Per-stream details page with advanced debug data (client IPs, connection state).
+    -   **`iperf` mode:**
 
-- **Media Browser & Info:**
-  - AJAX modal file selector for `.ts` media in `media/`.
-  - File analysis via `ffprobe` or `mediainfo`.
-  
-- **Security:**
-  - NGINX frontend with optional Basic Auth.
-  - CSRF protection via Flask-WTF.
-  - Requires strong `SECRET_KEY` (env var).
-  
-- **Designed for Air-Gapped Deployments:**
-  - **No** external CDNs or resources needed.
-  - All Bootstrap, jQuery, Chart.js & Font Awesome assets are local.
+        -   Requires optional iperf3 binary and configuration of a background server checking service (details below).
+        -   Prioritizes a pre-filtered safe list of UDP-capable servers (`app/data/udp_safe_servers.json`), generated by running `test_iperf_servers.py` regularly via systemd timer.
+        -   Performs `ping` + UDP `iperf3` tests to directly measure RTT, bandwidth, loss, jitter.
+        -   Provides more accurate SRT recommendations derived from measured stats.
+        -   Suitable when UDP tests to internet servers are feasible.
 
+    -   **In Both Modes:**
+        -   GeoIP is used to choose closer servers.
+        -   Tests available: Closest, Regional, or Manual (user supplies server).
+        -   Results auto-fill form fields with suggested latency & overhead for starting new streams.
+
+-   **System Info Dashboard:** host stats including CPU, RAM, disk, IP, uptime, user.
+
+-   **Stream Status:** live updates with:
+    -   Real-time charts for bitrate, RTT, loss.
+    -   SRT packet statistics, counters.
+    -   Per-stream details page with advanced debug data (client IPs, connection state).
+
+-   **Media Browser & Info:**
+    -   AJAX modal file selector for `.ts` media in `media/`.
+    -   File analysis via `ffprobe` or `mediainfo`.
+
+-   **Security:**
+    -   NGINX frontend with optional Basic Auth.
+    -   CSRF protection via Flask-WTF.
+    -   Requires strong `SECRET_KEY` (env var).
+
+-   **Designed for Air-Gapped Deployments:**
+    -   **No** external CDNs or resources needed.
+    -   All Bootstrap, jQuery, Chart.js & Font Awesome assets are local.
 
 ---
 
 ## Technology Stack
 
-- **Backend:** Python 3 with Flask microframework, Flask-WTF, Waitress WSGI, GStreamer via PyGObject, requests, psutil.
-- **Frontend:** Bootstrap 5, jQuery, Chart.js, Font Awesome (all local assets), Jinja2 templates, custom SVT-inspired styles.
-- **Supporting Tools:**  
-  `curl`, `ping` (iputils), `dig` (bind-utils/dnsutils), `ffmpeg` (for ffprobe), `mediainfo`,  
-  **optionally**: `iperf3` (if using full UDP network tests),  
-  `systemd`, and `nginx` (for serving/proxying + optional auth).
-  
+-   **Backend:** Python 3 with Flask microframework, Flask-WTF, Waitress WSGI, GStreamer via PyGObject, requests, psutil.
+-   **Frontend:** Bootstrap 5, jQuery, Chart.js, Font Awesome (all local assets), Jinja2 templates, custom SVT-inspired styles.
+-   **Supporting Tools:**
+    `curl`, `ping` (iputils), `dig` (bind-utils/dnsutils), `ffmpeg` (for ffprobe), `mediainfo`,
+    **optionally**: `iperf3` (if using full UDP network tests),
+    `systemd`, and `nginx` (for serving/proxying + optional auth).
+
 ---
 
 ## Architecture Overview
 
 ### Backend (`app/` directory)
 
-- `stream_manager.py`: controls creation, monitoring, and termination of GStreamer pipelines.
-- `network_test.py`: manages ping/iperf3 tests based on configured mode.
-- `test_iperf_servers.py`: background script to refresh/validate list of public iperf3 UDP servers.
-- `utils.py`: gathers system info, network interfaces, GeoIP functions.
-- `forms.py`: WTForms for user inputs.
-- `routes.py`: Flask routes for UI/API, passes environment config vars.
-- `dvb_config.py`: stores DVB-optimized pipeline parameters.
+-   `stream_manager.py`: controls creation, monitoring, and termination of GStreamer pipelines (including internal colorbar generators).
+-   `network_test.py`: manages ping/iperf3 tests based on configured mode.
+-   `test_iperf_servers.py`: background script to refresh/validate list of public iperf3 UDP servers.
+-   `utils.py`: gathers system info, network interfaces, GeoIP functions.
+-   `forms.py`: WTForms for user inputs.
+-   `routes.py`: Flask routes for UI/API, passes environment config vars.
+-   `dvb_config.py`: stores DVB-optimized pipeline parameters.
 
-**Logs**: `/var/log/srt-streamer/srt_streamer.log` (default)  
+**Logs**: `/var/log/srt-streamer/srt_streamer.log` (default)
 **Data:** `app/data/` (channel lists, iperf lists, GeoIP results caches, UDP safe servers list etc.)
 
 ### Frontend (via recommended NGINX proxy)
 
-- Serves static assets from `/opt/mcr-srt-streamer/app/static/`.
-- Protects with optional Basic Auth (`.htpasswd`).
-- Reverse proxies to Python Waitress server (default port 5000).
+-   Serves static assets from `/opt/mcr-srt-streamer/app/static/`.
+-   Protects with optional Basic Auth (`.htpasswd`).
+-   Reverse proxies to Python Waitress server (default port 5000).
 
 ### System Services (default install)
 
-- **`network-tuning.service`**: runs sysctl script (`network-tuning.sh`) to adjust OS network settings (optional but recommended).
-- **`mcr-srt-streamer.service`**: runs the Waitress Flask server, with configurable env vars (`SECRET_KEY`, `NETWORK_TEST_MECHANISM`, etc).
-- **`iperf-server-check.service` & `.timer`**:  
-  *optional* background timer to periodically (e.g., nightly) run the UDP server check to update good iperf3 server list. Only needed with `NETWORK_TEST_MECHANISM=iperf`.
+-   **`network-tuning.service`**: runs sysctl script (`network-tuning.sh`) to adjust OS network settings (optional but recommended).
+-   **`mcr-srt-streamer.service`**: runs the Waitress Flask server, with configurable env vars (`SECRET_KEY`, `NETWORK_TEST_MECHANISM`, etc).
+-   **`iperf-server-check.service` & `.timer`**:
+    *optional* background timer to periodically (e.g., nightly) run the UDP server check to update good iperf3 server list. Only needed with `NETWORK_TEST_MECHANISM=iperf`.
 
 ---
 
 ## System Requirements
 
-- **OS:**  
-  Debian / Ubuntu, or RHEL 9+ / Rocky Linux 9+ (other distros with recent GStreamer/Python should work with adjustments).
-- **RAM:**  
-  Approximately **1 GB / active stream** (e.g., ~10 GB for 10 streams).
-- **CPU:**  
-  Minimal, no transcoding.
-- **GPU:**  
-  Not required.
-- **Network:**  
-  Sufficient stable bandwidth plus overhead (> stream bitrate × (1 + overhead%)). Network tuning is recommended.
-- **Dependencies:**  
-  - Python 3 + pip & venv
-  - GStreamer 1.0 with good, bad, ugly, libav, gst-python bindings
-  - `ping` (iputils), `curl`, `dig` (dnsutils/bind-utils), `mediainfo`, and `ffmpeg`
-  - **Optional:** `iperf3` (only if full UDP tests needed)
+-   **OS:**
+    Debian / Ubuntu, or RHEL 9+ / Rocky Linux 9+ (other distros with recent GStreamer/Python should work with adjustments).
+-   **RAM:**
+    Approximately **1 GB / active stream** (e.g., ~10 GB for 10 streams). Plus resources for background generator pipelines if using Colorbars.
+-   **CPU:**
+    Minimal, but encoding for Colorbars will consume some CPU resources.
+-   **GPU:**
+    Not required.
+-   **Network:**
+    Sufficient stable bandwidth plus overhead (> stream bitrate × (1 + overhead%)). Network tuning is recommended.
+-   **Dependencies:**
+    -   Python 3 + pip & venv
+    -   GStreamer 1.0 with good, bad, ugly, libav, gst-python bindings (ensure plugins for H.264 (`x264enc`) and AAC (`fdkaacenc`, `voaacenc`) encoding are available).
+    -   `ping` (iputils), `curl`, `dig` (dnsutils/bind-utils), `mediainfo`, and `ffmpeg`
+    -   **Optional:** `iperf3` (only if full UDP tests needed)
 
 ---
 
@@ -166,18 +166,21 @@ sudo apt update && sudo apt install -y \
  libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev \
  gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
  gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
- gstreamer1.0-plugins-ugly gstreamer1.0-tools gstreamer1.0-libav \
+ gstreamer1.0-plugins-ugly gstreamer1.0-tools gstreamer1.0-libav gstreamer1.0-x264 \
  nginx curl iperf3 iputils-ping dnsutils ffmpeg mediainfo apache2-utils
 ```
+*(Note: Added gstreamer1.0-x264 explicitly, ensure relevant AAC packages like gstreamer1.0-fdkaac or similar are installed if needed and not covered by bad/ugly)*
 
 #### RHEL 9+ / Rocky 9:
 
 ```bash
+# Enable RPM Fusion or other repo providing gstreamer1.0-plugins-ugly/bad containing x264enc, fdkaacenc/voaacenc if not in base/epel
 sudo dnf update && sudo dnf install -y \
  python3 python3-pip python3-gobject gobject-introspection-devel cairo-gobject-devel \
  python3-devel pkgconf-pkg-config gcc \
  gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good \
  gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free gstreamer1-libav \
+ # Add packages for x264enc, fdkaacenc, voaacenc if not included above (e.g., gstreamer1-plugin-x264 gstreamer1-plugins-bad-freeworld) \
  nginx curl iperf3 iputils bind-utils ffmpeg mediainfo httpd-tools
 ```
 
@@ -195,92 +198,92 @@ deactivate
 
 ### 4. Initial Configuration
 
-- **Media Content:**  
+-   **Media Content:**
 
-  Place `.ts` files under:
+    Place `.ts` files under:
 
-  ```bash
-  sudo mkdir -p /opt/mcr-srt-streamer/media
-  sudo chown -R nginx:nginx /opt/mcr-srt-streamer/media  # Or desired user
-  # Copy your .ts files inside
-  ```
+    ```bash
+    sudo mkdir -p /opt/mcr-srt-streamer/media
+    sudo chown -R nginx:nginx /opt/mcr-srt-streamer/media  # Or desired user
+    # Copy your .ts files inside
+    ```
 
-- **Multicast Channels JSON (`app/data/iptv_channels.json`):**
+-   **Multicast Channels JSON (`app/data/iptv_channels.json`):**
 
-  ```json
-  [
-    {
-      "name": "Channel 1 HD",
-      "address": "239.1.1.1",
-      "port": 1234,
-      "protocol": "udp",
-      "source_ip": "10.0.0.1"  // optional
+    ```json
+    [
+      {
+        "name": "Channel 1 HD",
+        "address": "239.1.1.1",
+        "port": 1234,
+        "protocol": "udp",
+        "source_ip": "10.0.0.1"  // optional
+      }
+    ]
+    ```
+
+-   **Log & Data Directories:**
+
+    ```bash
+    sudo mkdir -p /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
+    sudo touch /opt/mcr-srt-streamer/app/data/external_ip_cache.json
+    sudo touch /opt/mcr-srt-streamer/app/data/iperf3_export_servers.json
+    sudo touch /opt/mcr-srt-streamer/app/data/iptv_channels.json # if not yet created
+    sudo chown -R nginx:nginx /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
+    ```
+
+-   **Flask Secret Key:**
+
+    ```bash
+    openssl rand -hex 32
+    # save the output for later step
+    ```
+
+-   **NGINX Reverse Proxy:**
+
+    Configure a server block (e.g., `/etc/nginx/conf.d/mcr-srt-streamer.conf`):
+
+    ```nginx
+    server {
+      listen 80;
+      server_name [invalid URL removed]; # or IP
+
+      auth_basic "Restricted Area";
+      auth_basic_user_file /etc/nginx/.htpasswd;
+
+      location / {
+        proxy_pass [http://127.0.0.1:5000](http://127.0.0.1:5000);
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 600s;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+      }
+      location /static {
+        alias /opt/mcr-srt-streamer/app/static;
+        expires 7d;
+        add_header Cache-Control "public";
+      }
     }
-  ]
-  ```
+    ```
 
-- **Log & Data Directories:**
+    Create htpasswd:
 
-  ```bash
-  sudo mkdir -p /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
-  sudo touch /opt/mcr-srt-streamer/app/data/external_ip_cache.json
-  sudo touch /opt/mcr-srt-streamer/app/data/iperf3_export_servers.json
-  sudo touch /opt/mcr-srt-streamer/app/data/iptv_channels.json # if not yet created
-  sudo chown -R nginx:nginx /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
-  ```
+    ```bash
+    sudo htpasswd -c /etc/nginx/.htpasswd admin  # choose your user/pass
+    sudo nginx -t && sudo systemctl reload nginx
+    ```
 
-- **Flask Secret Key:**
+-   **Systemd Services**
 
-  ```bash
-  openssl rand -hex 32
-  # save the output for later step
-  ```
+    Ensure scripts are executable:
 
-- **NGINX Reverse Proxy:**
-
-  Configure a server block (e.g., `/etc/nginx/conf.d/mcr-srt-streamer.conf`):
-
-  ```nginx
-  server {
-    listen 80;
-    server_name yourdomain.com; # or IP
-
-    auth_basic "Restricted Area";
-    auth_basic_user_file /etc/nginx/.htpasswd;
-
-    location / {
-      proxy_pass http://127.0.0.1:5000;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Forwarded-Proto $scheme;
-      proxy_connect_timeout 600s;
-      proxy_read_timeout 600s;
-      proxy_send_timeout 600s;
-    }
-    location /static {
-      alias /opt/mcr-srt-streamer/app/static;
-      expires 7d;
-      add_header Cache-Control "public";
-    }
-  }
-  ```
-
-  Create htpasswd:
-
-  ```bash
-  sudo htpasswd -c /etc/nginx/.htpasswd admin  # choose your user/pass
-  sudo nginx -t && sudo systemctl reload nginx
-  ```
-
-- **Systemd Services**
-
-  Ensure scripts are executable:
-
-  ```bash
-  chmod +x /opt/mcr-srt-streamer/network-tuning.sh
-  chmod +x /opt/mcr-srt-streamer/test_iperf_servers.py
-  ```
+    ```bash
+    chmod +x /opt/mcr-srt-streamer/network-tuning.sh
+    chmod +x /opt/mcr-srt-streamer/test_iperf_servers.py
+    ```
 
 #### Main App Service (`/etc/systemd/system/mcr-srt-streamer.service`)
 
@@ -326,7 +329,7 @@ sudo systemctl enable --now mcr-srt-streamer
 
 ### Optional: Background iperf3 UDP Server Validation Service (if using `iperf` mode)
 
-- **`/etc/systemd/system/iperf-server-check.service`:**
+-   **`/etc/systemd/system/iperf-server-check.service`:**
 
 ```ini
 [Unit]
@@ -345,7 +348,7 @@ ExecStart=/opt/venv/bin/python3 /opt/mcr-srt-streamer/test_iperf_servers.py
 WantedBy=multi-user.target
 ```
 
-- **`/etc/systemd/system/iperf-server-check.timer`:**
+-   **`/etc/systemd/system/iperf-server-check.timer`:**
 
 ```ini
 [Unit]
@@ -388,39 +391,38 @@ sudo systemctl restart nginx
 
 ## Usage Workflow
 
-1. **Login** to the web UI (via Basic Auth).
-2. **Dashboard:**
-   - Monitor system status.
-   - Launch **Listener** streams: select source (file / multicast), input params, smoothing latency, SRT latency, overhead, encryption, QoS.
-3. **Caller:**
-   - Launch as SRT Caller, specifying target IP and port, input params as above.
-4. **Network Testing:**
-   - View mechanism active (Ping or iperf+Ping).
-   - Select mode (Closest, Regional, Manual).
-   - Run test to measure RTT, bandwidth, loss (depending on mechanism).
-   - Click to auto-fill SRT recommended latency/overhead.
-5. **Per-Stream Detail Pages:**
-   - Monitor bitrates, stats, charts.
-   - View debug info including client addresses.
-6. **Stop Streams** anytime from dashboard.
+1.  **Login** to the web UI (via Basic Auth).
+2.  **Dashboard:**
+    -   Monitor system status.
+    -   Launch **Listener** streams: select source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i50**), input params, smoothing latency (if applicable), SRT latency, overhead, encryption, QoS.
+3.  **Caller:**
+    -   Launch as SRT Caller, specifying target IP and port, select input source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i50**), configure SRT parameters as above.
+4.  **Network Testing:**
+    -   View mechanism active (Ping or iperf+Ping).
+    -   Select mode (Closest, Regional, Manual).
+    -   Run test to measure RTT, bandwidth, loss (depending on mechanism).
+    -   Click to auto-fill SRT recommended latency/overhead.
+5.  **Per-Stream Detail Pages:**
+    -   Monitor bitrates, stats, charts.
+    -   View debug info including client addresses.
+6.  **Stop Streams** anytime from dashboard.
 
 ---
 
 ## Configuration & Network Tuning Tips
 
-- **SRT Latency & Overhead:**
-  - Increased latency buffers for jitter and recovery; typical recommendation = 4×RTT or more, plus safety margin.
-  - Overhead % covers recovery bandwidth; Haivision suggests >25-30% in lossy environments.
-- **TSParse smoothing latency:**
-  - PCR smoothing: try 20-50ms.
-- **QoS (DSCP):**
-  - Enable if your network honors DSCP tags.
-- **Choose test mode carefully:**
-  - Use `iperf` mode and background job if internet UDP allowed and accurate tuning critical.
-  - Use `ping_only` in secure or restricted environments.
-- **Adjust Linux sysctl via `network-tuning.sh`:**
-  - Increase socket buffers, tune net.filter parameters, etc.
-
+-   **SRT Latency & Overhead:**
+    -   Increased latency buffers for jitter and recovery; typical recommendation = 4×RTT or more, plus safety margin.
+    -   Overhead % covers recovery bandwidth; Haivision suggests >25-30% in lossy environments.
+-   **TSParse smoothing latency:**
+    -   PCR smoothing (for file/multicast inputs): try 20-50ms. Not applicable to Colorbar source.
+-   **QoS (DSCP):**
+    -   Enable if your network honors DSCP tags.
+-   **Choose test mode carefully:**
+    -   Use `iperf` mode and background job if internet UDP allowed and accurate tuning critical.
+    -   Use `ping_only` in secure or restricted environments.
+-   **Adjust Linux sysctl via `network-tuning.sh`:**
+    -   Increase socket buffers, tune net.filter parameters, etc.
 
 ---
 
@@ -432,9 +434,9 @@ MCR SRT Streamer is released under the **BSD 2-Clause License**. See the `LICENS
 
 ## References
 
-- Haivision SRT Protocol Deployment Guide v1.5.x (included in `/docs/`)
-- [SRT Alliance](https://www.srtalliance.org/)
-- [SRT GitHub](https://github.com/Haivision/srt)
-- [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
+-   Haivision SRT Protocol Deployment Guide v1.5.x (included in `/docs/`)
+-   [SRT Alliance](https://www.srtalliance.org/)
+-   [SRT GitHub](https://github.com/Haivision/srt)
+-   [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
 
 ---
