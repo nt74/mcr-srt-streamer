@@ -641,7 +641,7 @@ class StreamManager:
                     f'udpsrc uri="{udp_uri}" ! '
                     f'tsparse name="{tsparse_name}" set-timestamps=true ! '  # Removed smoothing here, tsparse defaults are usually ok
                     f"queue ! "
-                    f'srtsink name="{sink_name}" uri="{srt_uri}" async=false sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}'
+                    f'srtsink name="{sink_name}" uri="{srt_uri}" sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}'
                 )
             # *** END MODIFIED ***
             else:

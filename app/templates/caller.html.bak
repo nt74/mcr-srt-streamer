@@ -49,15 +49,17 @@
                         <div class="col-md-4"> {{ form.target_port.label(class="form-label") }} {{ form.target_port(class="form-control" + (' is-invalid' if form.target_port.errors else '')) }} <div class="form-text">Remote listener's SRT Port (1-65535).</div> {% if form.target_port.errors %} <div class="invalid-feedback d-block">{% for error in form.target_port.errors %}{{ error }}{% endfor %}</div> {% endif %} </div>
                     </div>
 
-                    {# Input Type Selection #}
+                    {# Input Type Selection (Default Multicast) #}
                     <div class="mb-3">
                         {{ form.input_type.label(class="form-label") }}
+                        {# *** MODIFIED: Added colorbar options *** #}
                         <select class="form-select{{ ' is-invalid' if form.input_type.errors else '' }}" id="input_type_caller" name="input_type">
                             <option value="multicast" {% if form.input_type.data == 'multicast' %}selected{% endif %}>Multicast UDP</option>
                             <option value="file" {% if form.input_type.data == 'file' %}selected{% endif %}>File</option>
                             <option value="colorbar_720p50" {% if form.input_type.data == 'colorbar_720p50' %}selected{% endif %}>Colorbars 720p50</option>
                             <option value="colorbar_1080i50" {% if form.input_type.data == 'colorbar_1080i50' %}selected{% endif %}>Colorbars 1080i50</option>
                         </select>
+                         {# *** END MODIFICATION *** #}
                         <div id="inputTypeHelpCaller" class="form-text">Choose input: Multicast UDP, local TS File, or Colorbar Generator.</div>
                         {% if form.input_type.errors %} <div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div> {% endif %}
                     </div>
@@ -77,22 +79,24 @@
 
                     {# Conditional Multicast Input Group (Includes Interface Dropdown) #}
                     <div class="mb-3 hidden-input" id="multicast-input-group-caller"> {# Start hidden #}
-                         {# *** MODIFIED: Restructured this section *** #}
-                         <div class="mb-3">
-                              {{ form.multicast_channel.label(class="form-label") }}
-                              {{ form.multicast_channel(class="form-select" + (' is-invalid' if form.multicast_channel.errors else ''), id="multicast_channel_caller") }}
-                              <div id="multicastHelpCaller" class="form-text">Select predefined multicast channel (from iptv_channels.json).</div>
-                              {% if form.multicast_channel.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_channel.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                          </div>
-                          <div class="mb-3">
-                               <div class="d-flex justify-content-between align-items-center">
-                                  {{ form.multicast_interface.label(class="form-label") }}
-                                  <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.multicast_interface.description }}"></i>
-                              </div>
-                              {{ form.multicast_interface(class="form-select" + (' is-invalid' if form.multicast_interface.errors else ''), id="multicast_interface_caller") }}
-                              {% if form.multicast_interface.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_interface.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                          </div>
-                          {# *** END MODIFICATION *** #}
+                         <div class="row">
+                              <div class="col-md-7">
+                                   {{ form.multicast_channel.label(class="form-label") }}
+                                   {{ form.multicast_channel(class="form-select" + (' is-invalid' if form.multicast_channel.errors else ''), id="multicast_channel_caller") }}
+                                   <div id="multicastHelpCaller" class="form-text mb-md-0">Select predefined multicast channel (from iptv_channels.json).</div>
+                                   {% if form.multicast_channel.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_channel.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                               </div>
+                               <div class="col-md-5">
+                                   {{ form.multicast_interface.label(class="form-label") }}
+                                   <div class="input-group">
+                                        {{ form.multicast_interface(class="form-select" + (' is-invalid' if form.multicast_interface.errors else ''), id="multicast_interface_caller") }}
+                                        <span class="input-group-text">
+                                             <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.multicast_interface.description }}"></i>
+                                        </span>
+                                   </div>
+                                   {% if form.multicast_interface.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_interface.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                               </div>
+                         </div>
                     </div>
 
                     {# Smoothing Latency Selection #}
@@ -195,7 +199,7 @@
             // Encryption Toggle
             $('#encryption_caller').change(function() { $('.caller-encryption-options').toggle($(this).val() !== 'none'); }).trigger('change');
 
-            // *** UPDATED: Input Type Visibility Toggle (Caller - Includes Colorbars) ***
+            // *** UPDATED: Input Type Visibility Toggle (Caller) ***
             const inputTypeSelectCaller = $('#input_type_caller');
             const fileGroupCaller = $('#file-input-group-caller');
             const multicastGroupCaller = $('#multicast-input-group-caller'); // This div now contains channel AND interface
