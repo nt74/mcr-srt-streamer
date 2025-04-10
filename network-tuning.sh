@@ -1,15 +1,12 @@
 #!/bin/bash
 # /opt/srt-streamer-enhanced/network-tuning.sh
-# Apply Network Settings for SRT Streamer Enhanced
 
-# --- BEGIN ADDED CODE ---
 # Check if sysctl command exists
 if ! command -v sysctl &> /dev/null
 then
     echo "ERROR: sysctl command not found. Cannot apply network tuning." | systemd-cat -p err -t network-tuning
     exit 1 # Exit if sysctl is missing
 fi
-# --- END ADDED CODE ---
 
 echo "Applying SRT/DVB network optimizations..." | systemd-cat -p info -t network-tuning
 
