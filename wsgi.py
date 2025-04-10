@@ -1,4 +1,3 @@
-# wsgi.py - Should look something like this
 from app import app
 from waitress import serve
 import os
