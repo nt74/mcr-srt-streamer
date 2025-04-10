@@ -91,11 +91,4 @@ logger.info("Application routes registered.")
 # Use app.logger for Flask-specific logging if preferred after initialization
 app.logger.info('SRT Streamer Enhanced Application initialized successfully.')
 
-# --- REMOVED DUPLICATE HEALTH CHECK ---
-# The health check route is now defined within app/routes.py
-# @app.route('/health')
-# def health_check():
-#    return "OK", 200
-# --- END REMOVED DUPLICATE ---
-
 # Add any other application-level setup here if needed
