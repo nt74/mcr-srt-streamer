@@ -374,13 +374,13 @@ class StreamManager:
         if resolution == "1080i50":
             width, height, framerate = 1920, 1080, "25/1"
             video_caps = f"video/x-raw,width={width},height={height},framerate={framerate},format=I420,interlace-mode=interleaved"
-            x264_opts = "tune=zerolatency interlaced=true bitrate=2500 speed-preset=1"
+            x264_opts = "tune=zerolatency interlaced=true bitrate=10000 speed-preset=1"
             overlay_text = f"MCR-SRT-STREAMER 1080i50"
             udp_uri = COLORBAR_URIS["1080i50"]
         elif resolution == "720p50":
             width, height, framerate = 1280, 720, "50/1"
             video_caps = f"video/x-raw,width={width},height={height},framerate={framerate},format=I420"
-            x264_opts = "tune=zerolatency bitrate=2500 speed-preset=1"
+            x264_opts = "tune=zerolatency bitrate=10000 speed-preset=1"
             overlay_text = f"MCR-SRT-STREAMER 720p50"
             udp_uri = COLORBAR_URIS["720p50"]
         else:
@@ -388,13 +388,13 @@ class StreamManager:
             return None
 
         video_pipeline_part = (
-            f"videotestsrc is-live=true ! {video_caps} ! "
+            f"videotestsrc pattern=smpte-rp-219 is-live=true ! {video_caps} ! "
             f'textoverlay text="{overlay_text}" valignment=bottom halignment=left font-desc="Sans Bold 32" color=0xFFFFFFFF outline-color=0x000000FF shaded-background=true ! '
             f"queue ! x264enc {x264_opts} ! queue ! mux."
         )
 
         audio_pipeline_part = ""
-        audio_src = "audiotestsrc wave=sine freq=1000 volume=0.19 is-live=true ! audio/x-raw,rate=48000,channels=2 ! queue"
+        audio_src = "audiotestsrc wave=sine freq=1000 volume=0.187 is-live=true ! audio/x-raw,rate=48000,channels=2 ! queue"
         if self._check_gst_element("fdkaacenc"):
             self.logger.info(f"Generator {resolution}: Using fdkaacenc")
             audio_pipeline_part = (
