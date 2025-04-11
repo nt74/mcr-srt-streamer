@@ -1,5 +1,6 @@
 # /opt/srt-streamer-enhanced/app/__init__.py
 # Initializes the Flask application, configures logging, CSRF, and registers routes.
+# MODIFIED to include and exempt API Blueprint
 
 from flask import Flask
 import os
@@ -22,11 +23,6 @@ try:
             # Set permissions appropriate for the directory
             os.makedirs(log_dir_standard, mode=0o755, exist_ok=True)
             logger.info(f"Created log directory: {log_dir_standard}")
-            # Optional: Set ownership if running as non-root and need specific user access
-            # import pwd, grp
-            # uid = pwd.getpwnam('your_run_user').pw_uid
-            # gid = grp.getgrnam('your_run_group').gr_gid
-            # os.chown(log_dir_standard, uid, gid)
         except Exception as dir_e:
             logger.error(f"Failed to create log directory {log_dir_standard}: {dir_e}. Logging to file might fail.")
 
@@ -53,15 +49,11 @@ except Exception as log_e:
 app = Flask(__name__)
 
 # ** IMPORTANT: Load SECRET_KEY from environment variable for production **
-# Example for systemd service file: Environment="SECRET_KEY=your_very_strong_random_secret_key"
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 if not app.config['SECRET_KEY']:
     logger.critical("FATAL ERROR: SECRET_KEY environment variable is not set. Application will not start securely.")
-    # Optionally, provide a default for development ONLY, but raise error/exit in production
-    # app.config['SECRET_KEY'] = 'dev-secret-key-only-not-for-production'
-    # logger.warning("SECURITY WARNING: Using insecure default SECRET_KEY for development.")
     raise ValueError("SECRET_KEY environment variable must be set for the application to run.")
-elif app.config['SECRET_KEY'] == 'a5458bf94a5181014e17836e8af327ec479b236bf393d089': # Check against the example default in service file
+elif app.config['SECRET_KEY'] == 'a5458bf94a5181014e17836e8af327ec479b236bf393d089': # Check against example
     logger.warning("SECURITY WARNING: Using the example default SECRET_KEY. Generate a new strong key and set it via environment variable.")
 
 
@@ -69,26 +61,29 @@ elif app.config['SECRET_KEY'] == 'a5458bf94a5181014e17836e8af327ec479b236bf393d0
 app.config['MEDIA_FOLDER'] = os.environ.get('MEDIA_FOLDER', '/opt/srt-streamer-enhanced/media') # Default if not set
 if not os.path.isdir(app.config['MEDIA_FOLDER']):
      logger.warning(f"Media folder '{app.config['MEDIA_FOLDER']}' does not exist or is not a directory.")
-     # Decide if this is fatal or not. Maybe create it? For now, just warn.
-
-# --- Initialize CSRF Protection ---
-csrf = CSRFProtect(app)
-logger.info("CSRF protection initialized.")
 
 # --- Initialize Managers ---
 # Ensure StreamManager is initialized *after* app config is set
-# This line correctly passes the media folder path to the StreamManager constructor
-# The TypeError previously observed originates from the StreamManager.__init__ definition itself
 app.stream_manager = StreamManager(app.config['MEDIA_FOLDER'])
 
-# --- Register Routes ---
-# Import the function and call it, passing the app instance
+# --- Register Blueprints ---
+# Import and register blueprints BEFORE initializing CSRF fully
 from app.routes import register_routes
-register_routes(app)
-logger.info("Application routes registered.")
+from app.api_routes import api_bp # <--- Import the API blueprint
+
+register_routes(app) # Register your standard web routes
+app.register_blueprint(api_bp) # <--- Register the API blueprint (default prefix is /api)
+logger.info("Registered web routes and API blueprint under /api")
+
+# --- Initialize CSRF Protection AFTER blueprints ---
+csrf = CSRFProtect()
+# Exclude the API blueprint from CSRF protection by name
+csrf.exempt(api_bp)
+csrf.init_app(app) # Initialize CSRF protection for the rest of the app
+logger.info("CSRF protection initialized, API blueprint exempted.")
+
 
 # --- Application Initialization Complete ---
-# Use app.logger for Flask-specific logging if preferred after initialization
-app.logger.info('SRT Streamer Enhanced Application initialized successfully.')
+app.logger.info('SRT Streamer Enhanced Application initialized successfully (with API).')
 
 # Add any other application-level setup here if needed
