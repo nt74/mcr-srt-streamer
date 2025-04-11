@@ -4,7 +4,7 @@
 
 `mcr-srt-streamer` is a tool for testing SRT (Secure Reliable Transport) listeners and callers, optimized for professional broadcast workflows (e.g., DVB transport streams). Built with Python, Flask, GStreamer, and Bootstrap 5 (with SVT color theme), it provides a web interface to manage and monitor multiple SRT streams originating from local Transport Stream (`.ts`) files, UDP multicast inputs, or internally generated test patterns.
 
-The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! ... ! srtsink`) for robust TS-over-SRT streaming and includes integrated network testing tools (`ping`, optionally `iperf3`) to recommend optimal SRT parameters (Latency, Overhead) derived from the Haivision SRT Deployment Guide. The interface is implemented with Bootstrap 5, jQuery, and Chart.js, designed for air-gapped or firewall-restricted operation with no external CDN dependencies.
+The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! ... ! srtsink`) for robust TS-over-SRT streaming and includes integrated network testing tools (`ping`, optionally `iperf3`) to recommend optimal SRT parameters (Latency, Overhead) derived from the Haivision SRT Deployment Guide[cite: 679]. The interface is implemented with Bootstrap 5, jQuery, and Chart.js, designed for air-gapped or firewall-restricted operation with no external CDN dependencies.
 
 ---
 
@@ -13,85 +13,72 @@ The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! .
 ### Streaming
 
 -   **Multi-Stream Hosting:** run multiple concurrent SRT streams (default simultaneous streams limit configurable).
-
 -   **Listener and Caller Modes:** launch streams as SRT Listener (server) or Caller (client) with easy web configuration.
-
 -   **Multiple Input Sources:**
     -   **File:** stream local `.ts` files from the `media/` directory.
-    -   **UDP Multicast:** ingest streams from IPTV multicast sources declared in `app/data/iptv_channels.json`, with selectable network interface (`Auto` chooses OS default).
+    -   **UDP Multicast:** ingest streams from IPTV multicast sources declared in `app/data/iptv_channels.json`[cite: 1], with selectable network interface (`Auto` chooses OS default).
     -   **Colorbar Generator:** Stream internally generated 720p50 or 1080i50 PAL color bars (SMPTE pattern) with a 1000Hz sine audio tone, suitable for testing SRT links without an external source.
-
 -   **GStreamer Pipeline Details:**
-    -   Inputs from local files or multicast via `filesrc` or `udpsrc`. For Colorbars, `videotestsrc` and `audiotestsrc` are used, outputting to an internal UDP multicast relay.
-    -   Transport Stream parsing via `tsparse` (for file/multicast/colorbar inputs before SRT sink) with:
+    -   Inputs from local files or multicast via `filesrc` or `udpsrc`. For Colorbars, `videotestsrc` and `audiotestsrc` are used, outputting to an internal UDP multicast relay[cite: 3].
+    -   Transport Stream parsing via `tsparse` (for file/multicast/colorbar inputs before SRT sink) with[cite: 3]:
         -   timestamps enabled (`set-timestamps=true`)
         -   DVB alignment (`alignment=7`)
         -   configurable smoothing latency (to reduce PCR jitter, mainly for file/multicast)
-    -   **Colorbar Generation:** Uses `videotestsrc` (pattern smpte100) and `audiotestsrc` (sine wave 1000Hz) for test signals. Audio is encoded to AAC, prioritizing `fdkaacenc` if available on the system, otherwise falling back to `voaacenc`. Video is encoded using `x264enc`. The generated streams are multiplexed into an MPEG-TS stream before being sent via SRT (using an internal UDP multicast relay for better compatibility).
-    -   SRT transmission via `srtsink` with:
+    -   **Colorbar Generation:** Uses `videotestsrc` (pattern smpte100) and `audiotestsrc` (sine wave 1000Hz) for test signals. Audio is encoded to AAC, prioritizing `fdkaacenc` if available on the system, otherwise falling back to `voaacenc`. Video is encoded using `x264enc`. The generated streams are multiplexed into an MPEG-TS stream before being sent via SRT (using an internal UDP multicast relay for better compatibility)[cite: 3].
+    -   SRT transmission via `srtsink` with[cite: 3]:
         -   adjustable latency (20-8000ms)
         -   bandwidth overhead (1-99%)
         -   optional encryption: AES-128 or AES-256 (10-79 character passphrase)
-        -   DVB-specific optimized parameters (large buffers, `tlpktdrop`, NAK tuning), configurable in `app/dvb_config.py`
+        -   DVB-specific optimized parameters (large buffers, `tlpktdrop`, NAK tuning), configurable in `app/dvb_config.py` [cite: 4]
         -   quality-of-service DSCP flag (`qos=true|false`)
-
--   **Detailed DVB Compliance:** Default pipeline settings and parameters fine-tuned for broadcast/DVB workflows.
+-   **Detailed DVB Compliance:** Default pipeline settings and parameters fine-tuned for broadcast/DVB workflows[cite: 4].
 
 ### Network Testing & Recommendations
 
 -   **Configurable Network Test Mechanisms:**
     Controlled via environment variable `NETWORK_TEST_MECHANISM`, defaulting to `ping_only`.
-
     -   **`ping_only` mode (default):**
-
-        -   Uses a list of global and regional iperf3 servers (`app/data/iperf3_export_servers.json`), but performs only ICMP `ping` to assess RTT.
-        -   Estimates packet loss for recommendations with a fixed fallback loss rate (`ASSUMED_LOSS_FOR_TCP_FALLBACK`, default 7%).
-        -   Provides latency and overhead suggestions based on Haivision Guide formulas using RTT + fixed loss.
+        -   Uses a list of global and regional iperf3 servers (`app/data/iperf3_export_servers.json`), but performs only ICMP `ping` to assess RTT[cite: 5].
+        -   Estimates packet loss for recommendations with a fixed fallback loss rate (`ASSUMED_LOSS_FOR_TCP_FALLBACK`, default 7%)[cite: 5].
+        -   Provides latency and overhead suggestions based on Haivision Guide formulas using RTT + fixed loss[cite: 5].
         -   Useful in firewall-restricted environments where UDP tests are blocked or `iperf3` is not available.
-
     -   **`iperf` mode:**
-
         -   Requires optional iperf3 binary and configuration of a background server checking service (details below).
-        -   Prioritizes a pre-filtered safe list of UDP-capable servers (`app/data/udp_safe_servers.json`), generated by running `test_iperf_servers.py` regularly via systemd timer.
-        -   Performs `ping` + UDP `iperf3` tests to directly measure RTT, bandwidth, loss, jitter.
-        -   Provides more accurate SRT recommendations derived from measured stats.
+        -   Prioritizes a pre-filtered safe list of UDP-capable servers (`app/data/udp_safe_servers.json`), generated by running `test_iperf_servers.py` regularly via systemd timer[cite: 5, 6].
+        -   Performs `ping` + UDP `iperf3` tests to directly measure RTT, bandwidth, loss, jitter[cite: 5].
+        -   Provides more accurate SRT recommendations derived from measured stats[cite: 5].
         -   Suitable when UDP tests to internet servers are feasible.
-
     -   **In Both Modes:**
-        -   GeoIP is used to choose closer servers.
-        -   Tests available: Closest, Regional, or Manual (user supplies server).
-        -   Results auto-fill form fields with suggested latency & overhead for starting new streams.
-
--   **System Info Dashboard:** host stats including CPU, RAM, disk, IP, uptime, user.
-
+        -   GeoIP is used to choose closer servers[cite: 5].
+        -   Tests available: Closest, Regional, or Manual (user supplies server)[cite: 5].
+        -   Results auto-fill form fields with suggested latency & overhead for starting new streams[cite: 5].
+-   **System Info Dashboard:** host stats including CPU, RAM, disk, IP, uptime, user[cite: 7].
 -   **Stream Status:** live updates with:
-    -   Real-time charts for bitrate, RTT, loss.
-    -   SRT packet statistics, counters.
-    -   Per-stream details page with advanced debug data (client IPs, connection state).
-
+    -   Real-time charts for bitrate, RTT, loss (on detail page)[cite: 8].
+    -   SRT packet statistics, counters (on detail page)[cite: 8].
+    -   Per-stream details page with advanced debug data (client IPs, connection state)[cite: 8, 9].
 -   **Media Browser & Info:**
-    -   AJAX modal file selector for `.ts` media in `media/`.
-    -   File analysis via `ffprobe` or `mediainfo`.
-
+    -   AJAX modal file selector for `.ts` media in `media/`[cite: 9].
+    -   File analysis via `mediainfo` (requires `mediainfo` binary)[cite: 9, 10].
 -   **Security:**
-    -   NGINX frontend with optional Basic Auth.
-    -   CSRF protection via Flask-WTF.
-    -   Requires strong `SECRET_KEY` (env var).
-
+    -   NGINX frontend with optional Basic Auth[cite: 11].
+    -   CSRF protection via Flask-WTF[cite: 11].
+    -   Requires strong `SECRET_KEY` (env var)[cite: 11].
+    -   **REST API Authentication** via `X-API-Key` header (env var `API_KEY`).
 -   **Designed for Air-Gapped Deployments:**
     -   **No** external CDNs or resources needed.
-    -   All Bootstrap, jQuery, Chart.js & Font Awesome assets are local.
+    -   All Bootstrap, jQuery, Chart.js & Font Awesome assets are local[cite: 12, 13, 14].
 
 ---
 
 ## Technology Stack
 
--   **Backend:** Python 3 with Flask microframework, Flask-WTF, Waitress WSGI, GStreamer via PyGObject, requests, psutil.
--   **Frontend:** Bootstrap 5, jQuery, Chart.js, Font Awesome (all local assets), Jinja2 templates, custom SVT-inspired styles.
+-   **Backend:** Python 3 with Flask microframework, Flask-WTF, Waitress WSGI, GStreamer via PyGObject, requests, psutil[cite: 15, 16].
+-   **Frontend:** Bootstrap 5, jQuery, Chart.js, Font Awesome (all local assets), Jinja2 templates, custom SVT-inspired styles[cite: 12, 13, 14, 17].
 -   **Supporting Tools:**
     `curl`, `ping` (iputils), `dig` (bind-utils/dnsutils), `ffmpeg` (for ffprobe), `mediainfo`,
     **optionally**: `iperf3` (if using full UDP network tests),
-    `systemd`, and `nginx` (for serving/proxying + optional auth).
+    `systemd`, and `nginx` (for serving/proxying + optional auth)[cite: 15].
 
 ---
 
@@ -99,29 +86,30 @@ The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! .
 
 ### Backend (`app/` directory)
 
--   `stream_manager.py`: controls creation, monitoring, and termination of GStreamer pipelines (including internal colorbar generators).
--   `network_test.py`: manages ping/iperf3 tests based on configured mode.
--   `test_iperf_servers.py`: background script to refresh/validate list of public iperf3 UDP servers.
--   `utils.py`: gathers system info, network interfaces, GeoIP functions.
--   `forms.py`: WTForms for user inputs.
--   `routes.py`: Flask routes for UI/API, passes environment config vars.
--   `dvb_config.py`: stores DVB-optimized pipeline parameters.
+-   `stream_manager.py`: controls creation, monitoring, and termination of GStreamer pipelines (including internal colorbar generators)[cite: 3].
+-   `network_test.py`: manages ping/iperf3 tests based on configured mode[cite: 5].
+-   `test_iperf_servers.py`: background script to refresh/validate list of public iperf3 UDP servers[cite: 6].
+-   `utils.py`: gathers system info, network interfaces, GeoIP functions[cite: 7].
+-   `forms.py`: WTForms for user inputs[cite: 2].
+-   `routes.py`: Flask routes for web UI[cite: 1].
+-   **`api_routes.py`**: Flask Blueprint routes for the REST API[cite: 18].
+-   `dvb_config.py`: stores DVB-optimized pipeline parameters[cite: 4].
 
-**Logs**: `/var/log/srt-streamer/srt_streamer.log` (default)
-**Data:** `app/data/` (channel lists, iperf lists, GeoIP results caches, UDP safe servers list etc.)
+**Logs**: `/var/log/srt-streamer/srt_streamer.log` (default) [cite: 11]
+**Data:** `app/data/` (channel lists, iperf lists, GeoIP results caches, UDP safe servers list etc.) [cite: 11, 1, 19, 20]
 
 ### Frontend (via recommended NGINX proxy)
 
--   Serves static assets from `/opt/mcr-srt-streamer/app/static/`.
--   Protects with optional Basic Auth (`.htpasswd`).
--   Reverse proxies to Python Waitress server (default port 5000).
+-   Serves static assets from `/opt/mcr-srt-streamer/app/static/`[cite: 11].
+-   Protects with optional Basic Auth (`.htpasswd`)[cite: 11].
+-   Reverse proxies to Python Waitress server (default port 5000)[cite: 11].
 
 ### System Services (default install)
 
--   **`network-tuning.service`**: runs sysctl script (`network-tuning.sh`) to adjust OS network settings (optional but recommended).
--   **`mcr-srt-streamer.service`**: runs the Waitress Flask server, with configurable env vars (`SECRET_KEY`, `NETWORK_TEST_MECHANISM`, etc).
+-   **`network-tuning.service`**: runs sysctl script (`network-tuning.sh`) to adjust OS network settings (optional but recommended)[cite: 11, 21].
+-   **`mcr-srt-streamer.service`**: runs the Waitress Flask server, with configurable env vars (`SECRET_KEY`, `NETWORK_TEST_MECHANISM`, `API_KEY`, etc)[cite: 11].
 -   **`iperf-server-check.service` & `.timer`**:
-    *optional* background timer to periodically (e.g., nightly) run the UDP server check to update good iperf3 server list. Only needed with `NETWORK_TEST_MECHANISM=iperf`.
+    *optional* background timer to periodically (e.g., nightly) run the UDP server check to update good iperf3 server list. Only needed with `NETWORK_TEST_MECHANISM=iperf`[cite: 11].
 
 ---
 
@@ -139,7 +127,7 @@ The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! .
     Sufficient stable bandwidth plus overhead (> stream bitrate × (1 + overhead%)). Network tuning is recommended.
 -   **Dependencies:**
     -   Python 3 + pip & venv
-    -   GStreamer 1.0 with good, bad, ugly, libav, gst-python bindings (ensure plugins for H.264 (`x264enc`) and AAC (`fdkaacenc`, `voaacenc`) encoding are available).
+    -   GStreamer 1.0 with good, bad, ugly, libav, gst-python bindings (ensure plugins for H.264 (`x264enc`) and AAC (`fdkaacenc`, `voaacenc`) encoding are available)[cite: 16].
     -   `ping` (iputils), `curl`, `dig` (dnsutils/bind-utils), `mediainfo`, and `ffmpeg`
     -   **Optional:** `iperf3` (only if full UDP tests needed)
 
@@ -208,7 +196,7 @@ deactivate
     # Copy your .ts files inside
     ```
 
--   **Multicast Channels JSON (`app/data/iptv_channels.json`):**
+-   **Multicast Channels JSON (`app/data/iptv_channels.json`):** [cite: 1]
 
     ```json
     [
@@ -232,11 +220,13 @@ deactivate
     sudo chown -R nginx:nginx /var/log/srt-streamer /opt/mcr-srt-streamer/app/data
     ```
 
--   **Flask Secret Key:**
+-   **Flask Secret Key & API Key:**
 
+    Generate strong keys:
     ```bash
-    openssl rand -hex 32
-    # save the output for later step
+    openssl rand -hex 32 # Generate SECRET_KEY
+    openssl rand -hex 32 # Generate API_KEY
+    # save both outputs for the systemd service file
     ```
 
 -   **NGINX Reverse Proxy:**
@@ -246,13 +236,14 @@ deactivate
     ```nginx
     server {
       listen 80;
-      server_name [invalid URL removed]; # or IP
+      server_name your-streamer-hostname.domain.com; # or IP
 
-      auth_basic "Restricted Area";
-      auth_basic_user_file /etc/nginx/.htpasswd;
+      # Optional: Basic Auth
+      # auth_basic "Restricted Area";
+      # auth_basic_user_file /etc/nginx/.htpasswd;
 
       location / {
-        proxy_pass [http://127.0.0.1:5000](http://127.0.0.1:5000);
+        proxy_pass [http://127.0.0.1:5000](http://127.0.0.1:5000); # Ensure Waitress listens here
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -269,10 +260,12 @@ deactivate
     }
     ```
 
-    Create htpasswd:
+    Create htpasswd (if using Basic Auth):
 
     ```bash
-    sudo htpasswd -c /etc/nginx/.htpasswd admin  # choose your user/pass
+    sudo htpasswd -c /etc/nginx/.htpasswd your_chosen_username
+    sudo chown nginx:nginx /etc/nginx/.htpasswd
+    sudo chmod 600 /etc/nginx/.htpasswd
     sudo nginx -t && sudo systemctl reload nginx
     ```
 
@@ -281,8 +274,8 @@ deactivate
     Ensure scripts are executable:
 
     ```bash
-    chmod +x /opt/mcr-srt-streamer/network-tuning.sh
-    chmod +x /opt/mcr-srt-streamer/test_iperf_servers.py
+    sudo chmod +x /opt/mcr-srt-streamer/network-tuning.sh
+    sudo chmod +x /opt/mcr-srt-streamer/test_iperf_servers.py
     ```
 
 #### Main App Service (`/etc/systemd/system/mcr-srt-streamer.service`)
@@ -296,11 +289,15 @@ Wants=network-tuning.service
 [Service]
 Type=simple
 WorkingDirectory=/opt/mcr-srt-streamer
-User=nginx
-Group=nginx
+User=nginx # Or user running Nginx/Waitress
+Group=nginx # Or group running Nginx/Waitress
 
-Environment="SECRET_KEY=PASTE_YOUR_GENERATED_KEY"
-Environment="HOST=127.0.0.1"
+# === CRITICAL: Set these environment variables ===
+Environment="SECRET_KEY=PASTE_YOUR_GENERATED_SECRET_KEY"
+Environment="API_KEY=PASTE_YOUR_GENERATED_API_KEY"
+# ================================================
+
+Environment="HOST=127.0.0.1" # Listen only locally if behind Nginx
 Environment="PORT=5000"
 Environment="THREADS=8"
 Environment="MEDIA_FOLDER=/opt/mcr-srt-streamer/media"
@@ -340,7 +337,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/mcr-srt-streamer
-User=root
+User=root # Needs permissions to write to app/data potentially, or adjust ownership
 Group=root
 ExecStart=/opt/venv/bin/python3 /opt/mcr-srt-streamer/test_iperf_servers.py
 
@@ -355,9 +352,9 @@ WantedBy=multi-user.target
 Description=Run UDP iperf3 servers check daily
 
 [Timer]
-OnCalendar=*-*-* 03:00:00
-RandomizedDelaySec=3600
-Persistent=true
+OnCalendar=*-*-* 03:00:00 # Run daily at 3 AM
+RandomizedDelaySec=3600 # Spread the load
+Persistent=true # Run on next boot if missed
 
 [Install]
 WantedBy=timers.target
@@ -391,7 +388,7 @@ sudo systemctl restart nginx
 
 ## Usage Workflow
 
-1.  **Login** to the web UI (via Basic Auth).
+1.  **Login** to the web UI (via Basic Auth if configured).
 2.  **Dashboard:**
     -   Monitor system status.
     -   Launch **Listener** streams: select source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i50**), input params, smoothing latency (if applicable), SRT latency, overhead, encryption, QoS.
@@ -405,15 +402,195 @@ sudo systemctl restart nginx
 5.  **Per-Stream Detail Pages:**
     -   Monitor bitrates, stats, charts.
     -   View debug info including client addresses.
-6.  **Stop Streams** anytime from dashboard.
+6.  **Stop Streams** anytime from dashboard or via API.
+
+---
+
+## REST API Usage
+
+The application provides a RESTful API for programmatic control, accessible under the `/api/` prefix.
+
+**Authentication:**
+
+-   All API requests **MUST** include a valid API key in the `X-API-Key` header.
+-   The expected API key is set via the `API_KEY` environment variable in the application's systemd service file.
+-   If Nginx Basic Auth is enabled, include the `-u USERNAME:PASSWORD` flag in your `curl` requests.
+
+**Endpoints:**
+
+### 1. List Active Streams
+
+-   **Endpoint:** `GET /api/streams`
+-   **Method:** `GET`
+-   **Auth:** `X-API-Key` header required.
+-   **Success Response (200 OK):**
+    ```json
+    {
+      "data": {
+        "10001": { // Key is listener port or target port for caller
+          "key": 10001,
+          "mode": "listener",
+          "connection_status": "Connected",
+          "uptime": "5m 10s",
+          "input_type": "multicast",
+          "source_detail": "239.1.1.1:1234",
+          "latency": 300,
+          "overhead_bandwidth": 5,
+          "encryption": "aes-128",
+          "passphrase_set": true,
+          "qos_enabled": false,
+          "smoothing_latency_ms": 30,
+          "port": 10001,
+          "target": null,
+          "client_ip": "192.168.1.50",
+          "srt_uri": "srt://0.0.0.0:10001?...",
+          "start_time": "2025-04-11 19:01:00 UTC",
+          "config": { ... full config ...}
+        },
+        "10002": { ... }
+      }
+    }
+    ```
+-   **Error Response:** `500 Internal Server Error` if retrieval fails.
+
+### 2. Get Stream Details/Statistics
+
+-   **Endpoint:** `GET /api/streams/<stream_key>`
+-   **Method:** `GET`
+-   **Auth:** `X-API-Key` header required.
+-   **URL Params:**
+    -   `<stream_key>`: The listener port (listener mode) or target port (caller mode) of the stream.
+-   **Success Response (200 OK):**
+    Returns detailed statistics including SRT metrics (bitrate, RTT, loss, packets sent/received/lost/retransmitted etc.) as provided by `stream_manager.get_stream_statistics()`. The exact structure depends on the stats available from `srtsink`.
+    ```json
+    {
+        "data": {
+            "connection_status": "Connected",
+            "connected_client": "192.168.1.50",
+            "uptime": "6m 2s",
+            "last_updated": 1712860022.123,
+            "config": { ... },
+            "bitrate_mbps": 8.50,
+            "rtt_ms": 45.5,
+            "loss_rate": 0.01,
+            "packets_sent_total": 123456,
+            "packets_lost_total": 12,
+            "packets_retransmitted_total": 15,
+            "bytes_sent_total": 123456789,
+            "packet_loss_percent": 0.01,
+            // ... many more potential SRT stats ...
+        }
+    }
+    ```
+-   **Error Responses:**
+    -   `400 Bad Request`: Invalid stream key format.
+    -   `404 Not Found`: Stream with the given key does not exist.
+    -   `500 Internal Server Error`: Failed to retrieve statistics.
+
+### 3. Start a New Stream
+
+-   **Endpoint:** `POST /api/streams`
+-   **Method:** `POST`
+-   **Auth:** `X-API-Key` header required.
+-   **Request Body (JSON):**
+    Requires a JSON object defining the stream configuration. Fields generally mirror the web forms:
+    * `mode`: `"listener"` or `"caller"` (required).
+    * `input_type`: `"multicast"`, `"file"`, `"colorbar_720p50"`, or `"colorbar_1080i50"` (required).
+    * `latency`: Integer, 20-8000 (required).
+    * `overhead_bandwidth`: Integer, 1-99 (required).
+    * `smoothing_latency_ms`: Integer (e.g., 20, 30), defaults to 30 if omitted.
+    * `encryption`: `"none"`, `"aes-128"`, `"aes-256"` (defaults to "none").
+    * `passphrase`: String (10-79 chars), **required** if `encryption` is not `"none"`.
+    * `qos`: Boolean (`true` or `false`), defaults to `false`.
+    * **If `mode` is "listener":**
+        * `port`: Integer, 10001-10010 (required).
+    * **If `mode` is "caller":**
+        * `target_address`: String (required).
+        * `target_port`: Integer, 1-65535 (required).
+    * **If `input_type` is "multicast":**
+        * `multicast_address`: String (required).
+        * `multicast_port`: Integer, 1-65535 (required).
+        * `multicast_interface`: String (optional, e.g., `"eth1"`, `""` for auto).
+    * **If `input_type` is "file":**
+        * `file_path`: String (filename within media folder, required).
+    * **If `input_type` starts with "colorbar_":**
+        * No extra fields needed besides `input_type`.
+-   **Success Response (201 Created):**
+    ```json
+    {
+      "message": "Listener stream started on port 10001.", // Or caller message
+      "stream_key": 10001, // The key used for the stream
+      "status": "starting"
+    }
+    ```
+-   **Error Responses:**
+    -   `400 Bad Request`: Invalid JSON, missing required fields, or validation failed (check `details` field).
+    -   `415 Unsupported Media Type`: Request body was not JSON.
+    -   `500 Internal Server Error`: Failed to start the stream process.
+    -   `503 Service Unavailable`: Stream manager not ready.
+
+### 4. Stop a Stream
+
+-   **Endpoint:** `DELETE /api/streams/<stream_key>`
+-   **Method:** `DELETE`
+-   **Auth:** `X-API-Key` header required.
+-   **URL Params:**
+    -   `<stream_key>`: The listener port (listener mode) or target port (caller mode) of the stream to stop.
+-   **Success Response (200 OK):**
+    ```json
+    {
+      "message": "Stream 10001 stop initiated.",
+      "status": "stopping"
+    }
+    ```
+-   **Error Responses:**
+    -   `400 Bad Request`: Invalid stream key format or other failure.
+    -   `404 Not Found`: Stream with the given key does not exist.
+    -   `500 Internal Server Error`: Failed to stop the stream process.
+    -   `503 Service Unavailable`: Stream manager not ready.
+
+### Example `curl` Usage (Listener with Multicast & AES-128):
+
+*(Assumes Nginx Basic Auth is also configured)*
+
+```bash
+# Replace placeholders with actual values
+API_KEY="YOUR_ACTUAL_API_KEY"
+NGINX_USER="YOUR_NGINX_USERNAME"
+NGINX_PASS="YOUR_NGINX_PASSWORD"
+STREAMER_URL="http://your-streamer-address" # e.g., [http://10.0.0.5](http://10.0.0.5) or [http://streamer.example.com](http://streamer.example.com)
+
+curl -X POST \
+     -u "${NGINX_USER}:${NGINX_PASS}" \
+     -H "X-API-Key: ${API_KEY}" \
+     -H "Content-Type: application/json" \
+     -d '{
+          "mode": "listener",
+          "port": 10001,
+          "input_type": "multicast",
+          "multicast_address": "239.1.1.1",
+          "multicast_port": 1234,
+          "multicast_interface": "",
+          "latency": 300,
+          "overhead_bandwidth": 5,
+          "smoothing_latency_ms": 30,
+          "encryption": "aes-128",
+          "passphrase": "MyPassword1234",
+          "qos": false
+     }' \
+     "${STREAMER_URL}/api/streams"
+
+# Example to delete the stream later
+# curl -X DELETE -u "${NGINX_USER}:${NGINX_PASS}" -H "X-API-Key: ${API_KEY}" "${STREAMER_URL}/api/streams/10001"
+```
 
 ---
 
 ## Configuration & Network Tuning Tips
 
 -   **SRT Latency & Overhead:**
-    -   Increased latency buffers for jitter and recovery; typical recommendation = 4×RTT or more, plus safety margin.
-    -   Overhead % covers recovery bandwidth; Haivision suggests >25-30% in lossy environments.
+    -   Increased latency buffers for jitter and recovery; typical recommendation = 4×RTT or more, plus safety margin[cite: 381, 382].
+    -   Overhead % covers recovery bandwidth; Haivision suggests >25-30% in lossy environments[cite: 364, 365].
 -   **TSParse smoothing latency:**
     -   PCR smoothing (for file/multicast inputs): try 20-50ms. Not applicable to Colorbar source.
 -   **QoS (DSCP):**
@@ -421,7 +598,7 @@ sudo systemctl restart nginx
 -   **Choose test mode carefully:**
     -   Use `iperf` mode and background job if internet UDP allowed and accurate tuning critical.
     -   Use `ping_only` in secure or restricted environments.
--   **Adjust Linux sysctl via `network-tuning.sh`:**
+-   **Adjust Linux sysctl via `network-tuning.sh`:** [cite: 21]
     -   Increase socket buffers, tune net.filter parameters, etc.
 
 ---
@@ -434,10 +611,9 @@ MCR SRT Streamer is released under the **BSD 2-Clause License**. See the `LICENS
 
 ## References
 
--   Haivision SRT Protocol Deployment Guide v1.5.x (included in `/docs/`)
+-   Haivision SRT Protocol Deployment Guide v1.5.x (included in `/docs/`) [cite: 679]
 -   [SRT Alliance](https://www.srtalliance.org/)
 -   [SRT GitHub](https://github.com/Haivision/srt)
 -   [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
 
 ---
-
