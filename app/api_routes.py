@@ -96,7 +96,7 @@ def api_start_stream():
 
     input_type = config_data.get('input_type')
     # Updated: Check against allowed values including colorbars
-    allowed_inputs = ['multicast', 'file', 'colorbar_720p50', 'colorbar_1080i50']
+    allowed_inputs = ['multicast', 'file', 'colorbar_720p50', 'colorbar_1080i25']
     if not input_type or input_type not in allowed_inputs:
         errors['input_type'] = f"Missing or invalid input_type. Allowed: {', '.join(allowed_inputs)}"
 
