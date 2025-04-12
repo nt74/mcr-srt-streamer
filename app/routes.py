@@ -239,7 +239,7 @@ def register_routes(app_instance):
             if input_type.startswith("colorbar_"):
                 resolution = input_type.split("_", 1)[
                     1
-                ]  # Extract '720p50' or '1080i50'
+                ]  # Extract '720p50' or '1080i25'
                 config["input_type"] = "colorbar"  # Set generic type for stream_manager
                 config["colorbar_resolution"] = resolution
                 media_source_detail = f"Colorbars {resolution.upper()}"
@@ -374,7 +374,7 @@ def register_routes(app_instance):
             if input_type.startswith("colorbar_"):
                 resolution = input_type.split("_", 1)[
                     1
-                ]  # Extract '720p50' or '1080i50'
+                ]  # Extract '720p50' or '1080i25'
                 config["input_type"] = "colorbar"  # Set generic type for stream_manager
                 config["colorbar_resolution"] = resolution
                 media_source_detail = f"Colorbars {resolution.upper()}"
