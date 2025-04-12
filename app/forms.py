@@ -69,7 +69,7 @@ class StreamForm(FlaskForm):
             ("multicast", "Multicast UDP"),
             ("file", "File"),
             ("colorbar_720p50", "Colorbars 720p50"),
-            ("colorbar_1080i50", "Colorbars 1080i50"),
+            ("colorbar_1080i25", "Colorbars 1080i25"),
         ],
         # *** END MODIFICATION ***
         default="multicast",
@@ -210,7 +210,7 @@ class CallerForm(FlaskForm):
             ("multicast", "Multicast UDP"),
             ("file", "File"),
             ("colorbar_720p50", "Colorbars 720p50"),
-            ("colorbar_1080i50", "Colorbars 1080i50"),
+            ("colorbar_1080i25", "Colorbars 1080i25"),
         ],
         # *** END MODIFICATION ***
         default="multicast",
