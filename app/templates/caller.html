@@ -56,7 +56,7 @@
                             <option value="multicast" {% if form.input_type.data == 'multicast' %}selected{% endif %}>Multicast UDP</option>
                             <option value="file" {% if form.input_type.data == 'file' %}selected{% endif %}>File</option>
                             <option value="colorbar_720p50" {% if form.input_type.data == 'colorbar_720p50' %}selected{% endif %}>Colorbars 720p50</option>
-                            <option value="colorbar_1080i50" {% if form.input_type.data == 'colorbar_1080i50' %}selected{% endif %}>Colorbars 1080i50</option>
+                            <option value="colorbar_1080i25" {% if form.input_type.data == 'colorbar_1080i25' %}selected{% endif %}>Colorbars 1080i25</option>
                         </select>
                         <div id="inputTypeHelpCaller" class="form-text">Choose input: Multicast UDP, local TS File, or Colorbar Generator.</div>
                         {% if form.input_type.errors %} <div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div> {% endif %}
