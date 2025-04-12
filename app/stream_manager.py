@@ -21,7 +21,7 @@ from app.dvb_config import DVB_STANDARD_CONFIG
 Gst.init(None)
 
 # Define multicast addresses for internal colorbar streams
-COLORBAR_URIS = {"720p50": "udp://224.1.1.1:5004", "1080i50": "udp://224.1.1.1:5005"}
+COLORBAR_URIS = {"720p50": "udp://224.1.1.1:5004", "1080i25": "udp://224.1.1.1:5005"}
 
 
 class StreamManager:
@@ -371,12 +371,12 @@ class StreamManager:
 
     def _build_generator_pipeline_str(self, resolution):
         """Builds the GStreamer pipeline string for the generator."""
-        if resolution == "1080i50":
+        if resolution == "1080i25":
             width, height, framerate = 1920, 1080, "25/1"
             video_caps = f"video/x-raw,width={width},height={height},framerate={framerate},format=I420,interlace-mode=interleaved"
             x264_opts = "tune=zerolatency interlaced=true bitrate=10000 speed-preset=1"
-            overlay_text = f"MCR-SRT-STREAMER 1080i50"
-            udp_uri = COLORBAR_URIS["1080i50"]
+            overlay_text = f"MCR-SRT-STREAMER 1080i25"
+            udp_uri = COLORBAR_URIS["1080i25"]
         elif resolution == "720p50":
             width, height, framerate = 1280, 720, "50/1"
             video_caps = f"video/x-raw,width={width},height={height},framerate={framerate},format=I420"
