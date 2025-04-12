@@ -17,14 +17,14 @@ The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! .
 -   **Multiple Input Sources:**
     -   **File:** stream local `.ts` files from the `media/` directory.
     -   **UDP Multicast:** ingest streams from IPTV multicast sources declared in `app/data/iptv_channels.json`[cite: 1], with selectable network interface (`Auto` chooses OS default).
-    -   **Colorbar Generator:** Stream internally generated 720p50 or 1080i50 PAL color bars (SMPTE pattern) with a 1000Hz sine audio tone, suitable for testing SRT links without an external source.
+    -   **Colorbar Generator:** Stream internally generated 720p50 or 1080i25 PAL color bars (SMPTE pattern) with a 1000Hz sine audio tone, suitable for testing SRT links without an external source.
 -   **GStreamer Pipeline Details:**
     -   Inputs from local files or multicast via `filesrc` or `udpsrc`. For Colorbars, `videotestsrc` and `audiotestsrc` are used, outputting to an internal UDP multicast relay[cite: 3].
     -   Transport Stream parsing via `tsparse` (for file/multicast/colorbar inputs before SRT sink) with[cite: 3]:
         -   timestamps enabled (`set-timestamps=true`)
         -   DVB alignment (`alignment=7`)
         -   configurable smoothing latency (to reduce PCR jitter, mainly for file/multicast)
-    -   **Colorbar Generation:** Uses `videotestsrc` (pattern smpte100) and `audiotestsrc` (sine wave 1000Hz) for test signals. Audio is encoded to AAC, prioritizing `fdkaacenc` if available on the system, otherwise falling back to `voaacenc`. Video is encoded using `x264enc`. The generated streams are multiplexed into an MPEG-TS stream before being sent via SRT (using an internal UDP multicast relay for better compatibility)[cite: 3].
+    -   **Colorbar Generation:** Uses `videotestsrc` (pattern smpte-rp-219) and `audiotestsrc` (sine wave 1000Hz) for test signals. Audio is encoded to AAC, prioritizing `fdkaacenc` if available on the system, otherwise falling back to `voaacenc`. Video is encoded using `x264enc`. The generated streams are multiplexed into an MPEG-TS stream before being sent via SRT (using an internal UDP multicast relay for better compatibility)[cite: 3].
     -   SRT transmission via `srtsink` with[cite: 3]:
         -   adjustable latency (20-8000ms)
         -   bandwidth overhead (1-99%)
@@ -391,9 +391,9 @@ sudo systemctl restart nginx
 1.  **Login** to the web UI (via Basic Auth if configured).
 2.  **Dashboard:**
     -   Monitor system status.
-    -   Launch **Listener** streams: select source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i50**), input params, smoothing latency (if applicable), SRT latency, overhead, encryption, QoS.
+    -   Launch **Listener** streams: select source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i25**), input params, smoothing latency (if applicable), SRT latency, overhead, encryption, QoS.
 3.  **Caller:**
-    -   Launch as SRT Caller, specifying target IP and port, select input source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i50**), configure SRT parameters as above.
+    -   Launch as SRT Caller, specifying target IP and port, select input source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i25**), configure SRT parameters as above.
 4.  **Network Testing:**
     -   View mechanism active (Ping or iperf+Ping).
     -   Select mode (Closest, Regional, Manual).
@@ -495,7 +495,7 @@ The application provides a RESTful API for programmatic control, accessible unde
 -   **Request Body (JSON):**
     Requires a JSON object defining the stream configuration. Fields generally mirror the web forms:
     * `mode`: `"listener"` or `"caller"` (required).
-    * `input_type`: `"multicast"`, `"file"`, `"colorbar_720p50"`, or `"colorbar_1080i50"` (required).
+    * `input_type`: `"multicast"`, `"file"`, `"colorbar_720p50"`, or `"colorbar_1080i25"` (required).
     * `latency`: Integer, 20-8000 (required).
     * `overhead_bandwidth`: Integer, 1-99 (required).
     * `smoothing_latency_ms`: Integer (e.g., 20, 30), defaults to 30 if omitted.
