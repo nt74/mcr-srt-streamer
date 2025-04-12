@@ -1,6 +1,7 @@
 # /opt/mcr-srt-streamer/app/forms.py
 # Added multicast_interface selection field
 # *** MODIFIED: Added colorbar choices to input_type and adjusted validation ***
+# *** MODIFIED: Added rtp_encapsulation checkbox ***
 
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -149,6 +150,14 @@ class StreamForm(FlaskForm):
             "class": "form-control",
         },
     )
+    # *** ADDED: RTP Encapsulation Field ***
+    rtp_encapsulation = BooleanField(
+        "RTP Encapsulation (SMPTE 2022-7)",
+        default=False,
+        render_kw={"class": "form-check-input"},
+        description="Encapsulate UDP input into RTP (rtpmp2tpay mtu=1316). Only for UDP/Multicast inputs.",
+    )
+    # *** END ADDED ***
     qos = BooleanField(
         "Enable QoS",
         default=False,
@@ -193,7 +202,14 @@ class StreamForm(FlaskForm):
                 self.passphrase.errors.append("Passphrase must be 10-79 characters.")
                 encryption_valid = False
 
-        return input_type_valid and encryption_valid
+        # *** ADDED: Validate RTP only for multicast/colorbar ***
+        rtp_valid = True
+        if self.rtp_encapsulation.data and input_type_value not in ["multicast", "colorbar_720p50", "colorbar_1080i25"]:
+             self.rtp_encapsulation.errors.append("RTP encapsulation only supported for Multicast or Colorbar inputs.")
+             rtp_valid = False
+        # *** END ADDED ***
+
+        return input_type_valid and encryption_valid and rtp_valid
 
 
 # --- CallerForm ---
@@ -291,6 +307,14 @@ class CallerForm(FlaskForm):
             "class": "form-control",
         },
     )
+    # *** ADDED: RTP Encapsulation Field ***
+    rtp_encapsulation = BooleanField(
+        "RTP Encapsulation (SMPTE 2022-7)",
+        default=False,
+        render_kw={"class": "form-check-input"},
+        description="Encapsulate UDP input into RTP (rtpmp2tpay mtu=1316). Only for UDP/Multicast inputs.",
+    )
+    # *** END ADDED ***
     qos = BooleanField(
         "Enable QoS",
         default=False,
@@ -334,7 +358,14 @@ class CallerForm(FlaskForm):
             self.target_address.errors.append("Invalid target address format.")
             target_valid = False
 
-        return input_type_valid and encryption_valid and target_valid
+        # *** ADDED: Validate RTP only for multicast/colorbar ***
+        rtp_valid = True
+        if self.rtp_encapsulation.data and input_type_value not in ["multicast", "colorbar_720p50", "colorbar_1080i25"]:
+            self.rtp_encapsulation.errors.append("RTP encapsulation only supported for Multicast or Colorbar inputs.")
+            rtp_valid = False
+        # *** END ADDED ***
+
+        return input_type_valid and encryption_valid and target_valid and rtp_valid
 
     def _validate_target_address(self, address):
         if address == "127.0.0.1":

@@ -15,6 +15,8 @@
         .input-group-text { min-width: 40px; justify-content: center; }
         .card-header.bg-warning { color: #000 !important; }
         .hidden-input { display: none; }
+        /* Add some spacing for the new checkbox row if needed */
+        .checkbox-row .col-md-6 { margin-bottom: 0.5rem; }
     </style>
 </head>
 <body>
@@ -141,13 +143,27 @@
                         </div>
                     </div>
 
-                    {# QoS #}
-                    <div class="form-check mb-3">
-                        {{ form.qos(class="form-check-input" + (' is-invalid' if form.qos.errors else '')) }}
-                        {{ form.qos.label(class="form-check-label") }}
-                        <i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.qos.description }}"></i>
-                        {% if form.qos.errors %} <div class="invalid-feedback d-block">{% for error in form.qos.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                    {# QoS & RTP Encapsulation #}
+                    {# *** MODIFIED: Added RTP checkbox here *** #}
+                    <div class="row mb-3 checkbox-row">
+                         <div class="col-md-6">
+                             <div class="form-check">
+                                {{ form.qos(class="form-check-input" + (' is-invalid' if form.qos.errors else '')) }}
+                                {{ form.qos.label(class="form-check-label") }}
+                                <i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.qos.description }}"></i>
+                                {% if form.qos.errors %} <div class="invalid-feedback d-block">{% for error in form.qos.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                            </div>
+                         </div>
+                         <div class="col-md-6">
+                            <div class="form-check">
+                                {{ form.rtp_encapsulation(class="form-check-input" + (' is-invalid' if form.rtp_encapsulation.errors else '')) }}
+                                {{ form.rtp_encapsulation.label(class="form-check-label") }}
+                                <i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.rtp_encapsulation.description }}"></i>
+                                {% if form.rtp_encapsulation.errors %} <div class="invalid-feedback d-block">{% for error in form.rtp_encapsulation.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                            </div>
+                         </div>
                     </div>
+                    {# *** END MODIFIED *** #}
 
                     {# Submit/Cancel Buttons #}
                     <div class="d-flex">

@@ -1,6 +1,5 @@
 # /opt/mcr-srt-streamer/app/stream_manager.py
-# *** MODIFIED: Implemented two-pipeline UDP multicast approach for colorbars ***
-# Includes generator management, audio encoder selection in generator.
+# *** MODIFIED: Added conditional RTP encapsulation for multicast inputs ***
 
 import gi
 
@@ -154,7 +153,8 @@ class StreamManager:
             input_desc = (
                 f"{input_type} {resolution}" if input_type == "colorbar" else input_type
             )
-            pipeline_description = f"stream {key} ({mode}{target}, input:{input_desc})"
+            rtp_encap = config_dict.get("rtp_encapsulation", False) # Get RTP flag
+            pipeline_description = f"stream {key} ({mode}{target}, input:{input_desc}{', RTP' if rtp_encap else ''})"
 
             if t == Gst.MessageType.STATE_CHANGED:
                 if message.src == stream_info.get("pipeline"):
@@ -454,11 +454,13 @@ class StreamManager:
         existing_pipeline = None
         srt_uri = ""
         pipeline_str = ""
-        DEFAULT_MULTICAST_INTERFACE = "vlan2"
+        DEFAULT_MULTICAST_INTERFACE = "vlan2" # Default interface if none specified
         try:
             mode = config.get("mode", "listener")
             target_port_config = config.get("target_port")
             listener_port_config = config.get("port")
+            rtp_encapsulation = config.get("rtp_encapsulation", False) # Get the new flag
+
             if mode == "caller":
                 key = self._validate_target_port(target_port_config)
             else:
@@ -482,7 +484,7 @@ class StreamManager:
                 time.sleep(0.5)
 
             input_type = config.get("input_type", "multicast")
-            self.logger.info(f"Starting stream {key} with input type: {input_type}")
+            self.logger.info(f"Starting stream {key} with input type: {input_type}, RTP Encapsulation: {rtp_encapsulation}")
 
             # --- Common SRT Sink Parameters (Moved up) ---
             overhead_bandwidth = int(config.get("overhead_bandwidth", 2))
@@ -530,6 +532,7 @@ class StreamManager:
             # --- End Common SRT Sink Parameters ---
 
             input_detail_log = "N/A"  # Initialize detail log
+            rtp_payload_str = "" # Initialize RTP payload string snippet
 
             # --- Build pipeline based on input type ---
             if input_type == "file":
@@ -563,10 +566,12 @@ class StreamManager:
                         f"Invalid smoothing latency '{smoothing_choice}', using default 30ms."
                     )
                 tsparse_name = f"tsparse_{key}"
+                # *** MODIFIED: Removed RTP encapsulation for FILE source ***
                 pipeline_str = (
                     f"{pipeline_input_str} ! "
                     f'tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_latency_us} parse-private-sections=true ! '
                     f"queue ! "
+                    # Note: No rtpmp2tpay here
                     f'srtsink name="{sink_name}" uri="{srt_uri}" async=false sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}'
                 )
             elif input_type == "multicast":
@@ -587,6 +592,13 @@ class StreamManager:
                     f"Multicast interface selected: '{selected_interface}', Using: '{interface_to_use}'"
                 )
                 if mc_protocol == "udp":
+                    # *** MODIFIED: Add RTP encapsulation logic here ***
+                    if rtp_encapsulation:
+                        self.logger.info(f"Enabling RTP encapsulation for stream {key}")
+                        rtp_payload_str = "rtpmp2tpay pt=33 mtu=1316 ! queue ! "
+                    else:
+                        rtp_payload_str = "" # No RTP encapsulation
+                    # *** END MODIFIED ***
                     pipeline_input_str = f'udpsrc uri="udp://{mc_address}:{mc_port}" multicast-iface="{interface_to_use}" buffer-size=20971520 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
                     self.logger.info(
                         f"Using UDP source: udp://{mc_address}:{mc_port} on {interface_to_use}"
@@ -611,6 +623,7 @@ class StreamManager:
                     f"{pipeline_input_str} ! "
                     f'tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_latency_us} parse-private-sections=true ! '
                     f"queue ! "
+                    f"{rtp_payload_str}" # Insert the RTP part (will be empty if not enabled)
                     f'srtsink name="{sink_name}" uri="{srt_uri}" async=false sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}'
                 )
             # *** MODIFIED: Use Generator -> Multicast -> Consumer approach ***
@@ -637,10 +650,18 @@ class StreamManager:
                 tsparse_name = f"tsparse_{key}"
                 srtsink_sync_param = "false"  # Live source from UDP
                 srtsink_wait_param = "true" if mode == "listener" else "false"
+                # *** MODIFIED: Also apply RTP encap for Colorbar (as it uses UDP source) ***
+                if rtp_encapsulation:
+                    self.logger.info(f"Enabling RTP encapsulation for colorbar stream {key}")
+                    rtp_payload_str = "rtpmp2tpay pt=33 mtu=1316 ! queue ! "
+                else:
+                    rtp_payload_str = ""
+                # *** END MODIFIED ***
                 pipeline_str = (
                     f'udpsrc uri="{udp_uri}" ! '
                     f'tsparse name="{tsparse_name}" set-timestamps=true ! '  # Removed smoothing here, tsparse defaults are usually ok
                     f"queue ! "
+                    f"{rtp_payload_str}" # Insert RTP part here too
                     f'srtsink name="{sink_name}" uri="{srt_uri}" sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}'
                 )
             # *** END MODIFIED ***
@@ -697,7 +718,7 @@ class StreamManager:
             stream_info_dict = {
                 "pipeline": pipeline,
                 "bus": bus,
-                "config": config,
+                "config": config, # Store the received config including rtp_encapsulation flag
                 "srt_uri": srt_uri,
                 "mode": mode,
                 "start_time": time.time(),
@@ -743,13 +764,13 @@ class StreamManager:
             # Use input_detail_log which was set based on type earlier
             return (
                 True,
-                f"Stream {mode} ({key}) starting: {input_type} '{input_detail_log}'",
+                f"Stream {mode} ({key}) starting: {input_type} '{input_detail_log}'" + (" with RTP" if rtp_encapsulation else ""),
             )
 
         except (KeyError, ValueError, FileNotFoundError, RuntimeError) as e:
             self.logger.error(
                 f"Configuration/Runtime error starting stream {key or 'N/A'}: {str(e)}",
-                exc_info=False,
+                exc_info=False, # Set to True for more debug if needed
             )
             if pipeline:
                 GLib.idle_add(
@@ -1212,7 +1233,7 @@ class StreamManager:
                             if start_time
                             else "N/A"
                         ),
-                        "config": config,
+                        "config": config, # Include full config
                     }
                     streams[key] = self._sanitize_for_json(stream_data)
             return streams

@@ -1,12 +1,10 @@
 # /opt/mcr-srt-streamer/app/routes.py
-# Added logic to populate and handle multicast interface selection
-# FIX: Handle empty iptv_channels.json gracefully
-# *** MODIFIED: Added colorbar input type handling ***
+# *** MODIFIED: Added rtp_encapsulation handling from forms ***
 
 from flask import (
     render_template,
     request,
-    jsonify,
+    jsonify,  # Keep jsonify for potential future use or error handling if needed
     send_from_directory,
     redirect,
     url_for,
@@ -29,7 +27,11 @@ from app.utils import (
     get_system_info,
     get_network_interfaces,
 )  # Added get_network_interfaces
-from app.network_test import NetworkTester
+
+# *** MODIFIED: Import NetworkTester AND the constant ***
+from app.network_test import NetworkTester, NETWORK_TEST_MECHANISM
+
+# *** END MODIFIED ***
 import os
 import logging
 from datetime import datetime
@@ -170,6 +172,7 @@ def register_routes(app_instance):
         active_streams = {}
         if hasattr(app_instance, "stream_manager") and app_instance.stream_manager:
             try:
+                # Use the API endpoint conceptually, but call the manager directly here
                 active_streams = app_instance.stream_manager.get_active_streams()
             except AttributeError as ae:
                 logger.error(f"Error accessing stream_manager methods: {ae}")
@@ -221,6 +224,7 @@ def register_routes(app_instance):
             )
 
         if form.validate_on_submit():
+            # *** MODIFIED: Add rtp_encapsulation to config ***
             config = {
                 "port": form.port.data,
                 "latency": form.latency.data,
@@ -231,7 +235,9 @@ def register_routes(app_instance):
                 "qos": form.qos.data,
                 "input_type": form.input_type.data,  # Initial input type from form
                 "smoothing_latency_ms": form.smoothing_latency_ms.data,
+                "rtp_encapsulation": form.rtp_encapsulation.data,  # <<< ADDED
             }
+            # *** END MODIFIED ***
             input_type = config["input_type"]  # Get initial input type
             media_source_detail = "N/A"
 
@@ -307,6 +313,7 @@ def register_routes(app_instance):
                 if form.input_type.data == "multicast"
                 else ""
             )
+            rtp_log = ", RTP" if config.get("rtp_encapsulation") else ""
             # *** END MODIFIED ***
 
             logger.info(
@@ -316,7 +323,7 @@ def register_routes(app_instance):
             if success:
                 # *** MODIFIED: Use generic config['input_type'] in log message ***
                 logger.info(
-                    f"Listener stream start initiated (Port: {config.get('port')}, Input: {config['input_type']} [{media_source_detail}]{interface_log}, Smoothing: {config.get('smoothing_latency_ms')}ms): {message}"
+                    f"Listener stream start initiated (Port: {config.get('port')}, Input: {config['input_type']} [{media_source_detail}]{interface_log}{rtp_log}, Smoothing: {config.get('smoothing_latency_ms')}ms): {message}"
                 )
                 # *** END MODIFIED ***
                 flash(
@@ -355,6 +362,7 @@ def register_routes(app_instance):
         error_message = None
 
         if form.validate_on_submit():
+            # *** MODIFIED: Add rtp_encapsulation to config ***
             config = {
                 "mode": "caller",
                 "target_address": form.target_address.data,
@@ -366,7 +374,9 @@ def register_routes(app_instance):
                 "qos": form.qos.data,
                 "input_type": form.input_type.data,  # Initial input type from form
                 "smoothing_latency_ms": form.smoothing_latency_ms.data,
+                "rtp_encapsulation": form.rtp_encapsulation.data,  # <<< ADDED
             }
+            # *** END MODIFIED ***
             input_type = config["input_type"]  # Get initial input type
             media_source_detail = "N/A"
 
@@ -430,6 +440,7 @@ def register_routes(app_instance):
                 if form.input_type.data == "multicast"
                 else ""
             )
+            rtp_log = ", RTP" if config.get("rtp_encapsulation") else ""
             # *** END MODIFIED ***
 
             logger.info(
@@ -441,7 +452,7 @@ def register_routes(app_instance):
             if success:
                 # *** MODIFIED: Use generic config['input_type'] in log message ***
                 logger.info(
-                    f"Caller stream start initiated (Target: {config['target_address']}:{config['target_port']}, Input: {config['input_type']} [{media_source_detail}]{interface_log}, Smoothing: {config.get('smoothing_latency_ms')}ms): {message}"
+                    f"Caller stream start initiated (Target: {config['target_address']}:{config['target_port']}, Input: {config['input_type']} [{media_source_detail}]{interface_log}{rtp_log}, Smoothing: {config.get('smoothing_latency_ms')}ms): {message}"
                 )
                 # *** END MODIFIED ***
                 flash(
@@ -460,8 +471,7 @@ def register_routes(app_instance):
             current_year=datetime.utcnow().year,
         )
 
-    # --- Other Routes ---
-    # [ Rest of the routes remain unchanged ]
+    # --- Other Web UI Routes (Unchanged) ---
     @app_instance.route("/stop_stream/<stream_key>", methods=["POST"])
     def stop_stream(stream_key):
         try:
@@ -505,8 +515,9 @@ def register_routes(app_instance):
             media_files.sort(key=lambda x: x["name"])
         except Exception as e:
             logger.error(f"Failed list media: {e}")
+            # Return JSON error for AJAX call
             return jsonify({"error": "Failed list media"}), 500
-        return jsonify(media_files)
+        return jsonify(media_files)  # Return JSON for AJAX call
 
     @app_instance.route("/media_info/<path:filename>")
     def media_info(filename):
@@ -575,79 +586,23 @@ def register_routes(app_instance):
         if not stream_data:
             flash(f"Stream ({key}) not found.", "warning")
             return redirect(url_for("index"))
-        form = StreamForm()
+        form = StreamForm()  # Need form context for template rendering base layout
         populate_multicast_choices(form.multicast_channel)
         populate_interface_choices(form.multicast_interface)
         return render_template(
             "stream_details.html",
             stream_key=key,
             stream=stream_data,
-            form=form,
+            form=form,  # Pass the form
             current_year=datetime.utcnow().year,
         )
 
-    # --- API Endpoints ---
-    @app_instance.route("/get_active_streams")
-    def get_active_streams():
-        try:
-            streams = app_instance.stream_manager.get_active_streams()
-            return jsonify(streams)
-        except Exception as e:
-            logger.error(f"API Error get_active_streams: {e}")
-            return jsonify({"error": "Could not retrieve stream list"}), 500
-
-    @app_instance.route("/api/stats/<stream_key>")
-    def get_stats(stream_key):
-        try:
-            key = int(stream_key)
-            assert 0 < key < 65536
-        except:
-            return jsonify({"error": f"Invalid key: {stream_key}"}), 400
-        stats = app_instance.stream_manager.get_stream_statistics(stream_key)
-        # Handle potential {'error': ...} return from get_stream_statistics
-        if isinstance(stats, dict) and "error" in stats:
-            if "not found" in stats["error"]:
-                return jsonify(stats), 404
-            else:
-                return jsonify(stats), 500  # Internal server error if stats failed
-        elif stats is None:  # Should ideally not happen if errors return dicts
-            return jsonify({"error": f"Stream ({stream_key}) stats unavailable"}), 404
-        else:
-            return jsonify(stats)  # Success case
-
-    @app_instance.route("/api/debug/<stream_key>")
-    def get_debug_info(stream_key):
-        try:
-            key = int(stream_key)
-            assert 0 < key < 65536
-        except:
-            return jsonify({"error": f"Invalid key: {stream_key}"}), 400
-        debug_info = app_instance.stream_manager.get_debug_info(stream_key)
-        if debug_info is None:
-            return jsonify({"error": f"Error fetching info for {stream_key}"}), 500
-        if "error" in debug_info:
-            status_code = 404 if "not found" in debug_info["error"].lower() else 500
-            return jsonify(debug_info), status_code
-        try:
-            return jsonify(debug_info)
-        except TypeError as e:
-            logger.error(f"Serialization error debug info {stream_key}: {e}")
-            return jsonify({"error": f"Serialization error"}), 500
-
-    @app_instance.route("/system_info")
-    def system_info():
-        try:
-            info = get_system_info()
-            return jsonify(info)
-        except Exception as e:
-            logger.error(f"API Error system_info: {e}")
-            return jsonify({"error": "Could not retrieve system info"}), 500
-
+    # --- Health Check (kept) ---
     @app_instance.route("/health")
     def health_check():
         return "OK", 200
 
-    # --- Network Test Routes ---
+    # --- Network Test Route (UI part, kept here) ---
     @app_instance.route("/network_test")
     def network_test_page():
         form = NetworkTestForm()
@@ -664,7 +619,7 @@ def register_routes(app_instance):
                 logger.error(f"Error prep network test: {e}")
         else:
             flash("Network testing service unavailable.", "warning")
-        dummy_form = StreamForm()
+        dummy_form = StreamForm()  # For base template
         populate_multicast_choices(dummy_form.multicast_channel)
         populate_interface_choices(dummy_form.multicast_interface)
         return render_template(
@@ -674,47 +629,51 @@ def register_routes(app_instance):
             location_info=location_info,
             regions=regions,
             current_year=datetime.utcnow().year,
+            # *** FIXED: Access constant correctly ***
+            network_test_mechanism=(
+                NETWORK_TEST_MECHANISM if network_tester else "unknown"
+            ),
         )
 
-    @app_instance.route("/api/network_test", methods=["POST"])
+    # --- RE-ADDED: Network Test API Endpoint (from Script 2) ---
+    @app_instance.route('/api/network_test', methods=['POST'])
     def network_test_api():
+        """ Executes a network test based on POST form data. """
         form = NetworkTestForm(request.form)
         if network_tester:
             try:
+                # Attempt to populate region choices - needed for validation if mode is regional
                 form.region.choices = [("", "-- Select Region --")] + [
                     (r, r) for r in network_tester.get_server_regions() if r
                 ]
             except Exception as e:
-                logger.error(f"Fail populate region API: {e}")
-        if form.validate():
-            try:
-                if not network_tester:
-                    return jsonify({"error": "Network test service unavailable."}), 503
-                location_info = network_tester.get_external_ip_and_location()
-                result = network_tester.run_network_test(
-                    mode=form.mode.data,
-                    region=form.region.data,
-                    manual_host=form.manual_host.data or None,
-                    manual_port=form.manual_port.data,
-                    manual_protocol=form.manual_protocol.data,
-                    duration=form.duration.data,
-                    bitrate=form.bitrate.data,
-                    location_info=location_info,
-                )
-                return jsonify(
-                    result or network_tester.get_fallback_results("Test returned None.")
-                )
-            except Exception as e:
-                logger.error(f"Net test API err: {e}", exc_info=True)
-                return jsonify({"error": f"Test fail: {e}"}), 500
-        else:
-            errors = {f: e[0] for f, e in form.errors.items() if f != "csrf_token"}
-            msg = next(iter(errors.values()), "Invalid input")
-            logger.warning(f"Net test validation fail: {errors}")
-            return (
-                jsonify({"error": f"Validation failed: {msg}", "details": errors}),
-                400,
-            )
+                logger.error(f"Net Test Route: Fail populate region API: {e}")
+                # Continue, validation might still pass if mode isn't regional
 
+            if form.validate(): # Use WTForms validation on the POST data
+                try:
+                    if not network_tester: # Double check after potential init failure
+                        return jsonify({"error": "Network test service unavailable."}), 503
+                    location_info = network_tester.get_external_ip_and_location()
+                    result = network_tester.run_network_test(
+                        mode=form.mode.data, region=form.region.data,
+                        manual_host=form.manual_host.data or None, manual_port=form.manual_port.data,
+                        manual_protocol=form.manual_protocol.data, duration=form.duration.data,
+                        bitrate=form.bitrate.data, location_info=location_info,
+                    )
+                    return jsonify(result or network_tester.get_fallback_results("Test returned None."))
+                except Exception as e:
+                    logger.error(f"Net test execution error: {e}", exc_info=True)
+                    return jsonify({"error": f"Network test execution failed: {str(e)}"}), 500
+            else:
+                # Validation failed
+                errors = {f: e[0] for f, e in form.errors.items() if f != 'csrf_token'}
+                msg = next(iter(errors.values()), "Invalid input")
+                logger.warning(f"Net test validation fail: {errors}")
+                return jsonify({"error": f"Validation failed: {msg}", "details": errors}), 400
+        else:
+            logger.error("Net test route called but network_tester not initialized.")
+            return jsonify({"error": "Network test service unavailable."}), 503
+    # --- END RE-ADDED ---
 
 # --- End of register_routes function ---

@@ -31,6 +31,7 @@ The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! .
         -   optional encryption: AES-128 or AES-256 (10-79 character passphrase)
         -   DVB-specific optimized parameters (large buffers, `tlpktdrop`, NAK tuning), configurable in `app/dvb_config.py` [cite: 4]
         -   quality-of-service DSCP flag (`qos=true|false`)
+        -   **Optional RTP Encapsulation:** Apply `rtpmp2tpay pt=33 mtu=1316` for UDP/Colorbar inputs, useful for SMPTE 2022-7 testing (selectable in UI/API).
 -   **Detailed DVB Compliance:** Default pipeline settings and parameters fine-tuned for broadcast/DVB workflows[cite: 4].
 
 ### Network Testing & Recommendations
@@ -391,9 +392,9 @@ sudo systemctl restart nginx
 1.  **Login** to the web UI (via Basic Auth if configured).
 2.  **Dashboard:**
     -   Monitor system status.
-    -   Launch **Listener** streams: select source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i25**), input params, smoothing latency (if applicable), SRT latency, overhead, encryption, QoS.
+    -   Launch **Listener** streams: select source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i25**), input params, smoothing latency (if applicable), SRT latency, overhead, encryption, QoS, **RTP Encapsulation** (for UDP/Colorbar).
 3.  **Caller:**
-    -   Launch as SRT Caller, specifying target IP and port, select input source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i25**), configure SRT parameters as above.
+    -   Launch as SRT Caller, specifying target IP and port, select input source (**File**, **Multicast UDP**, or **Colorbars 720p50/1080i25**), configure SRT parameters, QoS, **RTP Encapsulation** (for UDP/Colorbar).
 4.  **Network Testing:**
     -   View mechanism active (Ping or iperf+Ping).
     -   Select mode (Closest, Regional, Manual).
@@ -445,7 +446,21 @@ The application provides a RESTful API for programmatic control, accessible unde
           "client_ip": "192.168.1.50",
           "srt_uri": "srt://0.0.0.0:10001?...",
           "start_time": "2025-04-11 19:01:00 UTC",
-          "config": { ... full config ...}
+          "config": {
+             "mode": "listener",
+             "port": 10001,
+             "input_type": "multicast",
+             "multicast_address": "239.1.1.1",
+             "multicast_port": 1234,
+             "multicast_interface": "eth0",
+             "latency": 300,
+             "overhead_bandwidth": 5,
+             "smoothing_latency_ms": 30,
+             "encryption": "aes-128",
+             "passphrase": "********", // Passphrase not included in GET response
+             "qos": false,
+             "rtp_encapsulation": false // Included here
+          }
         },
         "10002": { ... }
       }
@@ -469,7 +484,8 @@ The application provides a RESTful API for programmatic control, accessible unde
             "connected_client": "192.168.1.50",
             "uptime": "6m 2s",
             "last_updated": 1712860022.123,
-            "config": { ... },
+            "timestamp_api": 1712860023.456,
+            "config": { ... full config, including rtp_encapsulation ... },
             "bitrate_mbps": 8.50,
             "rtt_ms": 45.5,
             "loss_rate": 0.01,
@@ -502,6 +518,7 @@ The application provides a RESTful API for programmatic control, accessible unde
     * `encryption`: `"none"`, `"aes-128"`, `"aes-256"` (defaults to "none").
     * `passphrase`: String (10-79 chars), **required** if `encryption` is not `"none"`.
     * `qos`: Boolean (`true` or `false`), defaults to `false`.
+    * **`rtp_encapsulation`**: Boolean (`true` or `false`), defaults to `false`. If `true`, encapsulates UDP or Colorbar input using `rtpmp2tpay pt=33 mtu=1316`. (Optional)
     * **If `mode` is "listener":**
         * `port`: Integer, 10001-10010 (required).
     * **If `mode` is "caller":**
@@ -549,7 +566,7 @@ The application provides a RESTful API for programmatic control, accessible unde
     -   `500 Internal Server Error`: Failed to stop the stream process.
     -   `503 Service Unavailable`: Stream manager not ready.
 
-### Example `curl` Usage (Listener with Multicast & AES-128):
+### Example `curl` Usage (Listener with Multicast & RTP Encapsulation):
 
 *(Assumes Nginx Basic Auth is also configured)*
 
@@ -566,22 +583,22 @@ curl -X POST \
      -H "Content-Type: application/json" \
      -d '{
           "mode": "listener",
-          "port": 10001,
+          "port": 10003,
           "input_type": "multicast",
-          "multicast_address": "239.1.1.1",
-          "multicast_port": 1234,
+          "multicast_address": "239.1.1.2",
+          "multicast_port": 5000,
           "multicast_interface": "",
           "latency": 300,
-          "overhead_bandwidth": 5,
+          "overhead_bandwidth": 10,
           "smoothing_latency_ms": 30,
-          "encryption": "aes-128",
-          "passphrase": "MyPassword1234",
-          "qos": false
+          "encryption": "none",
+          "qos": false,
+          "rtp_encapsulation": true
      }' \
      "${STREAMER_URL}/api/streams"
 
 # Example to delete the stream later
-# curl -X DELETE -u "${NGINX_USER}:${NGINX_PASS}" -H "X-API-Key: ${API_KEY}" "${STREAMER_URL}/api/streams/10001"
+# curl -X DELETE -u "${NGINX_USER}:${NGINX_PASS}" -H "X-API-Key: ${API_KEY}" "${STREAMER_URL}/api/streams/10003"
 ```
 
 ---
@@ -595,6 +612,8 @@ curl -X POST \
     -   PCR smoothing (for file/multicast inputs): try 20-50ms. Not applicable to Colorbar source.
 -   **QoS (DSCP):**
     -   Enable if your network honors DSCP tags.
+-   **RTP Encapsulation:**
+    -   Enable for UDP/Multicast/Colorbar inputs when testing compatibility with SMPTE 2022-7 receivers that expect RTP encapsulation. Adds `rtpmp2tpay pt=33 mtu=1316`.
 -   **Choose test mode carefully:**
     -   Use `iperf` mode and background job if internet UDP allowed and accurate tuning critical.
     -   Use `ping_only` in secure or restricted environments.
@@ -617,3 +636,4 @@ MCR SRT Streamer is released under the **BSD 2-Clause License**. See the `LICENS
 -   [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
 
 ---
+
