@@ -1,5 +1,4 @@
 # /opt/mcr-srt-streamer/app/api_routes.py
-# *** MODIFIED: Added rtp_encapsulation handling to api_start_stream ***
 
 from flask import Blueprint, jsonify, request, current_app as app
 import logging
@@ -10,20 +9,9 @@ import time # For stats update time
 
 # Import utilities needed by remaining routes
 from app.utils import get_system_info # Used by api_get_system_status
-# Removed NetworkTester and NetworkTestForm imports as they are no longer used here
-# from app.network_test import NetworkTester
-# from app.forms import NetworkTestForm
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
-
-# Network tester initialization removed as it's not used by remaining routes here
-# try:
-#     network_tester = NetworkTester()
-#     logger.info("NetworkTester initialized successfully for API routes.")
-# except Exception as e:
-#     logger.error(f"Failed to initialize NetworkTester for API routes: {e}", exc_info=True)
-#     network_tester = None
 
 # --- IMPORTANT: API Authentication ---
 def require_api_auth():
@@ -251,7 +239,6 @@ def api_stop_stream(stream_key):
         logger.error(f"API DELETE /streams/{stream_key} internal error: {e}", exc_info=True)
         return jsonify({"error": f"Internal server error stopping stream: {str(e)}"}), 500
 
-# --- network_test_api function REMOVED ---
 
 # --- System Status Route (existing) ---
 @api_bp.route('/system/status', methods=['GET'])

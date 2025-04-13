@@ -4,262 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SRT Caller Mode - MCR SRT Streamer</title>
-    {# *** MODIFIED TO USE LOCAL ASSETS *** #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}"> {# Font Awesome #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> {# Your Custom CSS #}
-    {# *** END MODIFIED ASSETS *** #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
-        /* Custom styles remain the same */
+        /* Keep existing styles */
         .form-text { font-size: 0.85rem; }
         .input-group-text { min-width: 40px; justify-content: center; }
         .card-header.bg-warning { color: #000 !important; }
         .hidden-input { display: none; }
-        /* Add some spacing for the new checkbox row if needed */
         .checkbox-row .col-md-6 { margin-bottom: 0.5rem; }
     </style>
 </head>
 <body>
     <div class="container mt-4">
-        {# --- Header Section with LOGO --- #}
+        {# Header Section #}
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <div class="d-flex align-items-center"> {# Wrap title and logo #}
-                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SVT Logo" style="height: 40px; margin-right: 15px;"> {# Adjust height/style as needed #}
+             <div class="d-flex align-items-center">
+                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SVT Logo" style="height: 40px; margin-right: 15px;">
                  <h1><i class="fas fa-phone-alt"></i> SRT Caller Mode</h1>
-            </div>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
+             </div>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
-        {# --- End Header Section --- #}
 
-        {# Error Display Logic remains the same #}
+        {# Error Display #}
         {% if error %} <div class="alert alert-danger alert-dismissible fade show" role="alert"> <strong>Error:</strong> {{ error }} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> </div> {% endif %}
         {% if form.errors %} {% for field, error_list in form.errors.items() %} {% if field != 'csrf_token' %} <div class="alert alert-warning alert-dismissible fade show" role="alert"> <strong>{{ form[field].label.text or field }}:</strong> {{ error_list | join(', ') }} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> </div> {% endif %} {% endfor %} {% endif %}
 
         <div class="card mb-4">
-            <div class="card-header bg-warning text-dark">
-                 <i class="fas fa-paper-plane"></i> Start Outgoing Caller Stream
-            </div>
+            <div class="card-header bg-warning text-dark"><i class="fas fa-paper-plane"></i> Start Outgoing Caller Stream</div>
             <div class="card-body">
+                {# Keep the entire <form> block exactly as it was in the version you provided #}
                 <form method="POST" action="{{ url_for('caller_page') }}" id="caller-form">
                     {{ form.csrf_token }}
-
-                    {# Target Address/Port remain the same #}
-                    <div class="row mb-3">
-                        <div class="col-md-8"> {{ form.target_address.label(class="form-label") }} {{ form.target_address(class="form-control" + (' is-invalid' if form.target_address.errors else '')) }} <div class="form-text">Remote listener's Hostname or IP address.</div> {% if form.target_address.errors %} <div class="invalid-feedback d-block">{% for error in form.target_address.errors %}{{ error }}{% endfor %}</div> {% endif %} </div>
-                        <div class="col-md-4"> {{ form.target_port.label(class="form-label") }} {{ form.target_port(class="form-control" + (' is-invalid' if form.target_port.errors else '')) }} <div class="form-text">Remote listener's SRT Port (1-65535).</div> {% if form.target_port.errors %} <div class="invalid-feedback d-block">{% for error in form.target_port.errors %}{{ error }}{% endfor %}</div> {% endif %} </div>
-                    </div>
-
+                    {# Target Address/Port #}
+                    <div class="row mb-3"><div class="col-md-8"> {{ form.target_address.label(class="form-label") }} {{ form.target_address(class="form-control" + (' is-invalid' if form.target_address.errors else '')) }} <div class="form-text">Remote listener's Hostname or IP address.</div> {% if form.target_address.errors %} <div class="invalid-feedback d-block">{% for error in form.target_address.errors %}{{ error }}{% endfor %}</div> {% endif %} </div><div class="col-md-4"> {{ form.target_port.label(class="form-label") }} {{ form.target_port(class="form-control" + (' is-invalid' if form.target_port.errors else '')) }} <div class="form-text">Remote listener's SRT Port (1-65535).</div> {% if form.target_port.errors %} <div class="invalid-feedback d-block">{% for error in form.target_port.errors %}{{ error }}{% endfor %}</div> {% endif %} </div></div>
                     {# Input Type Selection #}
-                    <div class="mb-3">
-                        {{ form.input_type.label(class="form-label") }}
-                        <select class="form-select{{ ' is-invalid' if form.input_type.errors else '' }}" id="input_type_caller" name="input_type">
-                            <option value="multicast" {% if form.input_type.data == 'multicast' %}selected{% endif %}>Multicast UDP</option>
-                            <option value="file" {% if form.input_type.data == 'file' %}selected{% endif %}>File</option>
-                            <option value="colorbar_720p50" {% if form.input_type.data == 'colorbar_720p50' %}selected{% endif %}>Colorbars 720p50</option>
-                            <option value="colorbar_1080i25" {% if form.input_type.data == 'colorbar_1080i25' %}selected{% endif %}>Colorbars 1080i25</option>
-                        </select>
-                        <div id="inputTypeHelpCaller" class="form-text">Choose input: Multicast UDP, local TS File, or Colorbar Generator.</div>
-                        {% if form.input_type.errors %} <div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                    </div>
-
-                    {# Conditional File Input Group #}
-                    <div class="mb-3 hidden-input" id="file-input-group-caller"> {# Start hidden #}
-                        {{ form.file_path.label(class="form-label") }}
-                        <div class="input-group">
-                            {{ form.file_path(class="form-control" + (' is-invalid' if form.file_path.errors else ''), placeholder="Select media file", id="file_path_caller") }}
-                            <button type="button" class="btn btn-secondary" id="browse-media-caller">
-                                <i class="fas fa-folder-open"></i> Browse
-                            </button>
-                        </div>
-                        <div id="fileHelpCaller" class="form-text">Select a local .ts file from the media library.</div>
-                         {% if form.file_path.errors %} <div class="invalid-feedback d-block">{% for error in form.file_path.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                    </div>
-
-                    {# Conditional Multicast Input Group (Includes Interface Dropdown) #}
-                    <div class="mb-3 hidden-input" id="multicast-input-group-caller"> {# Start hidden #}
-                         {# *** MODIFIED: Restructured this section *** #}
-                         <div class="mb-3">
-                              {{ form.multicast_channel.label(class="form-label") }}
-                              {{ form.multicast_channel(class="form-select" + (' is-invalid' if form.multicast_channel.errors else ''), id="multicast_channel_caller") }}
-                              <div id="multicastHelpCaller" class="form-text">Select predefined multicast channel (from iptv_channels.json).</div>
-                              {% if form.multicast_channel.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_channel.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                          </div>
-                          <div class="mb-3">
-                               <div class="d-flex justify-content-between align-items-center">
-                                  {{ form.multicast_interface.label(class="form-label") }}
-                                  <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.multicast_interface.description }}"></i>
-                              </div>
-                              {{ form.multicast_interface(class="form-select" + (' is-invalid' if form.multicast_interface.errors else ''), id="multicast_interface_caller") }}
-                              {% if form.multicast_interface.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_interface.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                          </div>
-                          {# *** END MODIFICATION *** #}
-                    </div>
-
-                    {# Smoothing Latency Selection #}
-                    <div class="mb-3">
-                         <div class="d-flex justify-content-between align-items-center">
-                              {{ form.smoothing_latency_ms.label(class="form-label") }}
-                              <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.smoothing_latency_ms.description }}"></i>
-                          </div>
-                         {{ form.smoothing_latency_ms(class="form-select" + (' is-invalid' if form.smoothing_latency_ms.errors else '')) }}
-                         {% if form.smoothing_latency_ms.errors %} <div class="invalid-feedback d-block">{% for error in form.smoothing_latency_ms.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                    </div>
-
-                    {# SRT Latency and Overhead #}
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            {{ form.latency.label(class="form-label") }}
-                            <div class="input-group">
-                                {{ form.latency(class="form-control" + (' is-invalid' if form.latency.errors else '')) }}
-                                <span class="input-group-text">ms</span>
-                            </div>
-                            <div class="form-text">SRT latency buffer (ms). Range: 20-8000.</div>
-                             {% if form.latency.errors %} <div class="invalid-feedback d-block">{% for error in form.latency.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                             <div class="d-flex justify-content-between align-items-center">
-                                {{ form.overhead_bandwidth.label(class="form-label") }}
-                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.overhead_bandwidth.description }}"></i>
-                            </div>
-                            {{ form.overhead_bandwidth(class="form-control" + (' is-invalid' if form.overhead_bandwidth.errors else '')) }}
-                             <div class="form-text">Recovery bandwidth overhead (%). Range: 1-99.</div> {# Updated help text #}
-                             {% if form.overhead_bandwidth.errors %} <div class="invalid-feedback d-block">{% for error in form.overhead_bandwidth.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                        </div>
-                    </div>
-
+                    <div class="mb-3">{{ form.input_type.label(class="form-label") }}<select class="form-select{{ ' is-invalid' if form.input_type.errors else '' }}" id="input_type_caller" name="input_type"><option value="multicast" {% if form.input_type.data == 'multicast' %}selected{% endif %}>Multicast UDP</option><option value="file" {% if form.input_type.data == 'file' %}selected{% endif %}>File</option><option value="colorbar_720p50" {% if form.input_type.data == 'colorbar_720p50' %}selected{% endif %}>Colorbars 720p50</option><option value="colorbar_1080i25" {% if form.input_type.data == 'colorbar_1080i25' %}selected{% endif %}>Colorbars 1080i25</option></select><div id="inputTypeHelpCaller" class="form-text">Choose input: Multicast UDP, local TS File, or Colorbar Generator.</div>{% if form.input_type.errors %} <div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div> {% endif %}</div>
+                    {# File Input #}
+                    <div class="mb-3 hidden-input" id="file-input-group-caller">{{ form.file_path.label(class="form-label") }}<div class="input-group">{{ form.file_path(class="form-control" + (' is-invalid' if form.file_path.errors else ''), placeholder="Select media file", id="file_path_caller") }}<button type="button" class="btn btn-secondary" id="browse-media-caller"><i class="fas fa-folder-open"></i> Browse</button></div><div id="fileHelpCaller" class="form-text">Select a local .ts file from the media library.</div>{% if form.file_path.errors %} <div class="invalid-feedback d-block">{% for error in form.file_path.errors %}{{ error }}{% endfor %}</div> {% endif %}</div>
+                    {# Multicast Input #}
+                     <div class="mb-3 hidden-input" id="multicast-input-group-caller"><div class="mb-3">{{ form.multicast_channel.label(class="form-label") }}{{ form.multicast_channel(class="form-select" + (' is-invalid' if form.multicast_channel.errors else ''), id="multicast_channel_caller") }}<div id="multicastHelpCaller" class="form-text">Select predefined multicast channel (from iptv_channels.json).</div>{% if form.multicast_channel.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_channel.errors %}{{ error }}{% endfor %}</div> {% endif %}</div><div class="mb-3"><div class="d-flex justify-content-between align-items-center">{{ form.multicast_interface.label(class="form-label") }}<i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.multicast_interface.description }}"></i></div>{{ form.multicast_interface(class="form-select" + (' is-invalid' if form.multicast_interface.errors else ''), id="multicast_interface_caller") }}{% if form.multicast_interface.errors %} <div class="invalid-feedback d-block">{% for error in form.multicast_interface.errors %}{{ error }}{% endfor %}</div> {% endif %}</div></div>
+                    {# Smoothing Latency #}
+                    <div class="mb-3"><div class="d-flex justify-content-between align-items-center">{{ form.smoothing_latency_ms.label(class="form-label") }}<i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.smoothing_latency_ms.description }}"></i></div>{{ form.smoothing_latency_ms(class="form-select" + (' is-invalid' if form.smoothing_latency_ms.errors else '')) }}{% if form.smoothing_latency_ms.errors %} <div class="invalid-feedback d-block">{% for error in form.smoothing_latency_ms.errors %}{{ error }}{% endfor %}</div> {% endif %}</div>
+                    {# SRT Latency & Overhead #}
+                    <div class="row mb-3"><div class="col-md-6">{{ form.latency.label(class="form-label") }}<div class="input-group">{{ form.latency(class="form-control" + (' is-invalid' if form.latency.errors else '')) }}<span class="input-group-text">ms</span></div><div class="form-text">SRT latency buffer (ms). Range: 20-8000.</div>{% if form.latency.errors %} <div class="invalid-feedback d-block">{% for error in form.latency.errors %}{{ error }}{% endfor %}</div> {% endif %}</div><div class="col-md-6"><div class="d-flex justify-content-between align-items-center">{{ form.overhead_bandwidth.label(class="form-label") }}<i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.overhead_bandwidth.description }}"></i></div>{{ form.overhead_bandwidth(class="form-control" + (' is-invalid' if form.overhead_bandwidth.errors else '')) }}<div class="form-text">Recovery bandwidth overhead (%). Range: 1-99.</div>{% if form.overhead_bandwidth.errors %} <div class="invalid-feedback d-block">{% for error in form.overhead_bandwidth.errors %}{{ error }}{% endfor %}</div> {% endif %}</div></div>
                     {# Encryption #}
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            {{ form.encryption.label(class="form-label") }}
-                            {{ form.encryption(class="form-select" + (' is-invalid' if form.encryption.errors else ''), id="encryption_caller") }}
-                             {% if form.encryption.errors %} <div class="invalid-feedback d-block">{% for error in form.encryption.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                        </div>
-                        <div class="col-md-6 caller-encryption-options" style="display: none;">
-                            {{ form.passphrase.label(class="form-label") }}
-                            {{ form.passphrase(class="form-control" + (' is-invalid' if form.passphrase.errors else ''), placeholder="Min 10, Max 79 chars") }}
-                             {% if form.passphrase.errors %} <div class="invalid-feedback d-block">{% for error in form.passphrase.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                        </div>
-                    </div>
-
-                    {# QoS & RTP Encapsulation #}
-                    {# *** MODIFIED: Added RTP checkbox here *** #}
-                    <div class="row mb-3 checkbox-row">
-                         <div class="col-md-6">
-                             <div class="form-check">
-                                {{ form.qos(class="form-check-input" + (' is-invalid' if form.qos.errors else '')) }}
-                                {{ form.qos.label(class="form-check-label") }}
-                                <i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.qos.description }}"></i>
-                                {% if form.qos.errors %} <div class="invalid-feedback d-block">{% for error in form.qos.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                            </div>
-                         </div>
-                         <div class="col-md-6">
-                            <div class="form-check">
-                                {{ form.rtp_encapsulation(class="form-check-input" + (' is-invalid' if form.rtp_encapsulation.errors else '')) }}
-                                {{ form.rtp_encapsulation.label(class="form-check-label") }}
-                                <i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.rtp_encapsulation.description }}"></i>
-                                {% if form.rtp_encapsulation.errors %} <div class="invalid-feedback d-block">{% for error in form.rtp_encapsulation.errors %}{{ error }}{% endfor %}</div> {% endif %}
-                            </div>
-                         </div>
-                    </div>
-                    {# *** END MODIFIED *** #}
-
-                    {# Submit/Cancel Buttons #}
-                    <div class="d-flex">
-                        <button type="submit" class="btn btn-warning me-2">
-                            <i class="fas fa-play"></i> Start Caller Stream
-                        </button>
-                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Cancel</a>
-                    </div>
+                    <div class="row mb-3"><div class="col-md-6">{{ form.encryption.label(class="form-label") }}{{ form.encryption(class="form-select" + (' is-invalid' if form.encryption.errors else ''), id="encryption_caller") }}{% if form.encryption.errors %} <div class="invalid-feedback d-block">{% for error in form.encryption.errors %}{{ error }}{% endfor %}</div> {% endif %}</div><div class="col-md-6 caller-encryption-options" style="display: none;">{{ form.passphrase.label(class="form-label") }}{{ form.passphrase(class="form-control" + (' is-invalid' if form.passphrase.errors else ''), placeholder="Min 10, Max 79 chars") }}{% if form.passphrase.errors %} <div class="invalid-feedback d-block">{% for error in form.passphrase.errors %}{{ error }}{% endfor %}</div> {% endif %}</div></div>
+                    {# QoS & RTP #}
+                    <div class="row mb-3 checkbox-row"><div class="col-md-6"><div class="form-check">{{ form.qos(class="form-check-input" + (' is-invalid' if form.qos.errors else '')) }}{{ form.qos.label(class="form-check-label") }}<i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.qos.description }}"></i>{% if form.qos.errors %} <div class="invalid-feedback d-block">{% for error in form.qos.errors %}{{ error }}{% endfor %}</div> {% endif %}</div></div><div class="col-md-6"><div class="form-check">{{ form.rtp_encapsulation(class="form-check-input" + (' is-invalid' if form.rtp_encapsulation.errors else '')) }}{{ form.rtp_encapsulation.label(class="form-check-label") }}<i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.rtp_encapsulation.description }}"></i>{% if form.rtp_encapsulation.errors %} <div class="invalid-feedback d-block">{% for error in form.rtp_encapsulation.errors %}{{ error }}{% endfor %}</div> {% endif %}</div></div></div>
+                    {# Submit/Cancel #}
+                    <div class="d-flex"><button type="submit" class="btn btn-warning me-2"><i class="fas fa-play"></i> Start Caller Stream</button><a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Cancel</a></div>
                 </form>
-            </div> {# End card-body #}
-        </div> {# End card #}
+            </div>
+        </div>
 
         {# Footer #}
-        <footer class="mt-5 mb-3 text-center text-muted"> <hr> <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under BSD 2-Clause.</p> </footer>
-    </div> {# End container #}
+	<footer class="mt-5 mb-3 text-center text-muted">
+		<hr>
 
-    {# Media Browser Modal #}
-    <div class="modal fade" id="mediaBrowserModal" tabindex="-1" aria-labelledby="mediaBrowserModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable"> <div class="modal-content">
-            <div class="modal-header bg-secondary text-white"> <h5 class="modal-title" id="mediaBrowserModalLabel"> <i class="fas fa-folder-open"></i> Select Media File </h5> <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button> </div>
-            <div class="modal-body">
-                 <div class="d-flex justify-content-between align-items-center mb-3"><h6>Available Media Files (.ts)</h6><button id="refresh-media-caller-modal" class="btn btn-sm btn-outline-secondary"><i class="fas fa-sync"></i> Refresh List</button> </div>
-                 <div id="media-loading-caller-modal" class="text-center" style="display: none;"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Loading...</span></div><p>Loading media files...</p></div>
-                 <div id="media-error-caller-modal" class="alert alert-danger" style="display: none;"></div>
-                 <div class="table-responsive"><table class="table table-hover" id="media-files-caller-modal"><thead><tr><th>File Name</th><th>Size</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
-            </div>
-            <div class="modal-footer"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button> </div>
-        </div> </div>
+		{# Main Copyright and License #}
+		<p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank" rel="noopener noreferrer">BSD-2-Clause License</a>.</p>
+
+		{# Font Information #}
+		<p class="small">Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html" target="_blank" rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.</p>
+
+		{# Additional Info specific to the Network Test page #}
+		{% if request.endpoint == 'network_test_page' %}
+		<p class="small">Network test uses `ping`{% if network_test_mechanism == 'iperf' %} and `iperf3` (UDP/TCP){% endif %}. Recommendations may use assumed loss if iperf3 is disabled or fails.</p>
+		<p class="small"> Public iperf3 server list data provided by <a href="https://iperf3serverlist.net/" target="_blank" rel="noopener noreferrer">iperf3serverlist.net</a>, used under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+		{% endif %}
+	</footer>
     </div>
 
-    {# --- JAVASCRIPT --- #}
-    {# *** MODIFIED TO USE LOCAL ASSETS *** #}
+    {# Media Browser Modal (HTML remains the same) #}
+    <div class="modal fade" id="mediaBrowserModal" tabindex="-1" aria-labelledby="mediaBrowserModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"> <div class="modal-content"><div class="modal-header bg-secondary text-white"> <h5 class="modal-title" id="mediaBrowserModalLabel"> <i class="fas fa-folder-open"></i> Select Media File </h5> <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button> </div><div class="modal-body"><div class="d-flex justify-content-between align-items-center mb-3"><h6>Available Media Files (.ts)</h6><button id="refresh-media-caller-modal" class="btn btn-sm btn-outline-secondary"><i class="fas fa-sync"></i> Refresh List</button> </div><div id="media-loading-caller-modal" class="text-center" style="display: none;"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Loading...</span></div><p>Loading media files...</p></div><div id="media-error-caller-modal" class="alert alert-danger" style="display: none;"></div><div class="table-responsive"><table class="table table-hover" id="media-files-caller-modal"><thead><tr><th>File Name</th><th>Size</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div><div class="modal-footer"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button> </div></div> </div></div>
+
+    {# --- REMOVED Inline JavaScript --- #}
+
+    {# --- ADD Links to External JavaScript --- #}
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-    {# *** END MODIFIED ASSETS *** #}
+    {# Shared Helpers #}
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+    {# Page Specific Logic #}
+    <script src="{{ url_for('static', filename='js/caller.js') }}"></script>
 
-    <script>
-        $(document).ready(function() {
-            // Tooltips
-            const tooltipTriggerList = [...document.querySelectorAll('[data-bs-toggle="tooltip"]')];
-            tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-
-            // --- Caller Form Specific Logic ---
-
-            // Encryption Toggle
-            $('#encryption_caller').change(function() { $('.caller-encryption-options').toggle($(this).val() !== 'none'); }).trigger('change');
-
-            // *** UPDATED: Input Type Visibility Toggle (Caller - Includes Colorbars) ***
-            const inputTypeSelectCaller = $('#input_type_caller');
-            const fileGroupCaller = $('#file-input-group-caller');
-            const multicastGroupCaller = $('#multicast-input-group-caller'); // This div now contains channel AND interface
-
-            function toggleInputFieldsCaller() {
-                const selectedType = inputTypeSelectCaller.val();
-                // Hide all conditional groups first
-                fileGroupCaller.addClass('hidden-input');
-                multicastGroupCaller.addClass('hidden-input');
-
-                // Show the relevant group
-                if (selectedType === 'file') {
-                    fileGroupCaller.removeClass('hidden-input');
-                } else if (selectedType === 'multicast') {
-                    multicastGroupCaller.removeClass('hidden-input'); // Show the whole multicast group div
-                } else if (selectedType.startsWith('colorbar_')) {
-                     // No specific group to show for colorbars, file and multicast remain hidden
-                }
-            }
-            inputTypeSelectCaller.on('change', toggleInputFieldsCaller);
-            toggleInputFieldsCaller(); // Set initial state based on current value
-            // --- *** END: Input Type Visibility Toggle (Caller) *** ---
-
-            // --- Media Browser Logic (Caller Page) ---
-            let activeFilePathInputCaller = null;
-            $('#browse-media-caller').click(function() { activeFilePathInputCaller = $('#file_path_caller'); loadMediaFilesCallerModal(); $('#mediaBrowserModal').modal('show'); });
-            $('#refresh-media-caller-modal').click(loadMediaFilesCallerModal);
-            function loadMediaFilesCallerModal() {
-                const targetTbody = $('#media-files-caller-modal tbody'); targetTbody.empty();
-                $('#media-loading-caller-modal').show(); $('#media-error-caller-modal').hide();
-                $.ajax({ url: '/media', type: 'GET', dataType: 'json',
-                    success: function(data) {
-                        $('#media-loading-caller-modal').hide();
-                        if (!data || data.length === 0) { targetTbody.append('<tr><td colspan="3" class="text-center text-muted">No .ts media files found.</td></tr>'); return; }
-                        data.forEach(function(file) {
-                            const row = `<tr><td class="text-break">${file.name}</td><td>${formatBytes(file.size)}</td><td><button class="btn btn-sm btn-primary select-media-caller-modal" data-file="${file.name}"><i class="fas fa-check"></i> Select</button> <a href="/media_info/${encodeURIComponent(file.name)}" target="_blank" class="btn btn-sm btn-info ms-1" title="View Info"><i class="fas fa-info-circle"></i> Info</a></td></tr>`;
-                            targetTbody.append(row);
-                        });
-                        targetTbody.off('click', '.select-media-caller-modal').on('click', '.select-media-caller-modal', function() {
-                            const fileName = $(this).data('file'); if (activeFilePathInputCaller) { activeFilePathInputCaller.val(fileName); } $('#mediaBrowserModal').modal('hide');
-                        });
-                    }, error: function(xhr) { $('#media-loading-caller-modal').hide(); $('#media-error-caller-modal').show().text('Error loading media files: ' + (xhr.responseJSON?.error || 'Unknown error')); }
-                });
-            }
-            // formatBytes
-            function formatBytes(b,d=2){if(!b||isNaN(b))return'0 B';const k=1024,m=d<0?0:d,s=['B','KB','MB','GB','TB','PB','EB','ZB','YB'],i=Math.min(Math.floor(Math.log(b)/Math.log(k)),s.length-1);return parseFloat((b/Math.pow(k,i)).toFixed(m))+' '+s[i];}
-
-        }); // End document.ready
-    </script>
 </body>
 </html>

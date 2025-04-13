@@ -1,7 +1,4 @@
 # /opt/mcr-srt-streamer/app/forms.py
-# Added multicast_interface selection field
-# *** MODIFIED: Added colorbar choices to input_type and adjusted validation ***
-# *** MODIFIED: Added rtp_encapsulation checkbox ***
 
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -65,14 +62,12 @@ class StreamForm(FlaskForm):
 
     input_type = SelectField(
         "Input Source Type",
-        # *** MODIFIED: Added colorbar choices ***
         choices=[
             ("multicast", "Multicast UDP"),
             ("file", "File"),
             ("colorbar_720p50", "Colorbars 720p50"),
             ("colorbar_1080i25", "Colorbars 1080i25"),
         ],
-        # *** END MODIFICATION ***
         default="multicast",
         validators=[DataRequired()],
         render_kw={"class": "form-select", "aria-describedby": "inputTypeHelp"},
@@ -94,7 +89,6 @@ class StreamForm(FlaskForm):
         validators=[Optional()],
         render_kw={"class": "form-select", "aria-describedby": "multicastHelp"},
     )
-    # *** NEW: Multicast Interface Selection ***
     multicast_interface = SelectField(
         "Multicast Interface",
         choices=[("", "-- Auto --")],  # Populated by route, '' = Auto/Default
@@ -115,18 +109,18 @@ class StreamForm(FlaskForm):
         render_kw={"class": "form-select", "aria-describedby": "portHelp"},
     )
     smoothing_latency_ms = SelectField(
-        "TSParse Smoothing Latency",
+        "Smoothing Latency",
         choices=[("20", "20 ms"), ("30", "30 ms (Recommended)")],
         default="30",
         validators=[DataRequired()],
         render_kw={"class": "form-select", "aria-describedby": "smoothingHelp"},
-        description="TSParser smoothing latency (PCR stabilization buffer).",
+        description="Smoothing latency (PCR stabilization buffer).",
     )
     latency = IntegerField(
         "SRT Latency (ms)",
         validators=[DataRequired(), NumberRange(min=20, max=8000)],
         default=300,
-        render_kw={"class": "form-control", "min": "20", "max": "8000", "step": "10"},
+        render_kw={"class": "form-control", "min": "20", "max": "8000", "step": "1"},
     )
     overhead_bandwidth = IntegerField(
         "Overhead Bandwidth",
@@ -150,25 +144,17 @@ class StreamForm(FlaskForm):
             "class": "form-control",
         },
     )
-    # *** ADDED: RTP Encapsulation Field ***
     rtp_encapsulation = BooleanField(
         "RTP Encapsulation (SMPTE 2022-7)",
         default=False,
         render_kw={"class": "form-check-input"},
-        description="Encapsulate UDP input into RTP (rtpmp2tpay mtu=1316). Only for UDP/Multicast inputs.",
+        description="Encapsulate UDP input into RTP (mtu=1316). Only for UDP/Multicast inputs.",
     )
-    # *** END ADDED ***
     qos = BooleanField(
         "Enable QoS",
         default=False,
         render_kw={"class": "form-check-input"},
         description="Enable Quality of Service flag (qos=true) for SRT URI",
-    )
-    dvb_compliant = BooleanField(
-        "DVB Compliant",
-        default=True,
-        render_kw={"class": "form-check-input", "disabled": True},
-        description="Applies DVB-specific SRT buffer/timing settings (See README)",
     )
 
     def validate(self, extra_validators=None):
@@ -177,7 +163,6 @@ class StreamForm(FlaskForm):
             return False  # Basic validation failed
 
         input_type_valid = True
-        # *** MODIFIED: Updated input type check logic slightly ***
         input_type_value = self.input_type.data
         if input_type_value == "file":
             if not self.file_path.data:
@@ -191,7 +176,6 @@ class StreamForm(FlaskForm):
                 input_type_valid = False
         elif input_type_value.startswith("colorbar_"):
             pass  # No specific validation needed for file/multicast fields here
-        # *** END MODIFICATION ***
 
         encryption_valid = True
         if self.encryption.data != "none":
@@ -202,12 +186,10 @@ class StreamForm(FlaskForm):
                 self.passphrase.errors.append("Passphrase must be 10-79 characters.")
                 encryption_valid = False
 
-        # *** ADDED: Validate RTP only for multicast/colorbar ***
         rtp_valid = True
         if self.rtp_encapsulation.data and input_type_value not in ["multicast", "colorbar_720p50", "colorbar_1080i25"]:
              self.rtp_encapsulation.errors.append("RTP encapsulation only supported for Multicast or Colorbar inputs.")
              rtp_valid = False
-        # *** END ADDED ***
 
         return input_type_valid and encryption_valid and rtp_valid
 
@@ -221,14 +203,12 @@ class CallerForm(FlaskForm):
 
     input_type = SelectField(
         "Input Source Type",
-        # *** MODIFIED: Added colorbar choices ***
         choices=[
             ("multicast", "Multicast UDP"),
             ("file", "File"),
             ("colorbar_720p50", "Colorbars 720p50"),
             ("colorbar_1080i25", "Colorbars 1080i25"),
         ],
-        # *** END MODIFICATION ***
         default="multicast",
         validators=[DataRequired()],
         render_kw={"class": "form-select", "aria-describedby": "inputTypeHelpCaller"},
@@ -246,7 +226,6 @@ class CallerForm(FlaskForm):
         validators=[Optional()],
         render_kw={"class": "form-select"},
     )
-    # *** NEW: Multicast Interface Selection ***
     multicast_interface = SelectField(
         "Multicast Interface",
         choices=[("", "-- Auto --")],  # Populated by route, '' = Auto/Default
@@ -272,18 +251,18 @@ class CallerForm(FlaskForm):
     )
 
     smoothing_latency_ms = SelectField(
-        "TSParse Smoothing Latency",
+        "Smoothing Latency",
         choices=[("20", "20 ms"), ("30", "30 ms (Recommended)")],
         default="30",
         validators=[DataRequired()],
         render_kw={"class": "form-select", "aria-describedby": "smoothingHelpCaller"},
-        description="TSParser smoothing latency (PCR stabilization buffer).",
+        description="Smoothing latency (PCR stabilization buffer).",
     )
     latency = IntegerField(
         "SRT Latency (ms)",
         validators=[DataRequired(), NumberRange(min=20, max=8000)],
         default=300,
-        render_kw={"class": "form-control", "min": "20", "max": "8000", "step": "10"},
+        render_kw={"class": "form-control", "min": "20", "max": "8000", "step": "1"},
     )
     overhead_bandwidth = IntegerField(
         "Overhead Bandwidth",
@@ -307,14 +286,12 @@ class CallerForm(FlaskForm):
             "class": "form-control",
         },
     )
-    # *** ADDED: RTP Encapsulation Field ***
     rtp_encapsulation = BooleanField(
         "RTP Encapsulation (SMPTE 2022-7)",
         default=False,
         render_kw={"class": "form-check-input"},
-        description="Encapsulate UDP input into RTP (rtpmp2tpay mtu=1316). Only for UDP/Multicast inputs.",
+        description="Encapsulate UDP input into RTP (mtu=1316). Only for UDP/Multicast inputs.",
     )
-    # *** END ADDED ***
     qos = BooleanField(
         "Enable QoS",
         default=False,
@@ -328,7 +305,6 @@ class CallerForm(FlaskForm):
             return False
 
         input_type_valid = True
-        # *** MODIFIED: Updated input type check logic slightly ***
         input_type_value = self.input_type.data
         if input_type_value == "file":
             if not self.file_path.data:
@@ -342,7 +318,6 @@ class CallerForm(FlaskForm):
                 input_type_valid = False
         elif input_type_value.startswith("colorbar_"):
             pass  # No specific validation needed for file/multicast fields here
-        # *** END MODIFICATION ***
 
         encryption_valid = True
         if self.encryption.data != "none":
@@ -358,12 +333,10 @@ class CallerForm(FlaskForm):
             self.target_address.errors.append("Invalid target address format.")
             target_valid = False
 
-        # *** ADDED: Validate RTP only for multicast/colorbar ***
         rtp_valid = True
         if self.rtp_encapsulation.data and input_type_value not in ["multicast", "colorbar_720p50", "colorbar_1080i25"]:
             self.rtp_encapsulation.errors.append("RTP encapsulation only supported for Multicast or Colorbar inputs.")
             rtp_valid = False
-        # *** END ADDED ***
 
         return input_type_valid and encryption_valid and target_valid and rtp_valid
 
@@ -376,7 +349,7 @@ class CallerForm(FlaskForm):
         return False
 
 
-# --- NetworkTestForm, MediaUploadForm, SettingsForm remain unchanged ---
+# --- NetworkTestForm, MediaUploadForm, SettingsForm ---
 class NetworkTestForm(FlaskForm):
     # ... (keep existing implementation) ...
     mode = RadioField(
@@ -452,7 +425,6 @@ class NetworkTestForm(FlaskForm):
 
 
 class MediaUploadForm(FlaskForm):
-    # ... (keep existing implementation) ...
     media_file = FileField(
         "Media File",
         validators=[
@@ -469,7 +441,6 @@ class MediaUploadForm(FlaskForm):
 
 
 class SettingsForm(FlaskForm):
-    # ... (keep existing implementation) ...
     max_streams = IntegerField(
         "Maximum Concurrent Streams",
         validators=[DataRequired(), NumberRange(min=1, max=10)],

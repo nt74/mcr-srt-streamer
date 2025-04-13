@@ -1,5 +1,4 @@
 # /opt/mcr-srt-streamer/app/stream_manager.py
-# *** MODIFIED: Added conditional RTP encapsulation for multicast inputs ***
 
 import gi
 
@@ -14,7 +13,6 @@ import time
 import re
 import json
 from collections import defaultdict
-from app.dvb_config import DVB_STANDARD_CONFIG
 
 # Initialize GStreamer
 Gst.init(None)
@@ -28,11 +26,9 @@ class StreamManager:
     def __init__(self, media_folder):
         self.media_folder = media_folder
         self.active_streams = {}
-        # *** ADDED: Generator pipeline tracking ***
         self.generator_pipelines = (
             {}
         )  # Stores running generator Gst.Pipeline objects {resolution: pipeline}
-        # *** END ADDED ***
         self.lock = threading.RLock()
         self.mainloop = GLib.MainLoop()
         self.thread = threading.Thread(target=self.mainloop.run)
@@ -54,7 +50,7 @@ class StreamManager:
         except Exception as e:
             self.logger.error(f"Could not get GStreamer version string: {e}")
 
-    # --- Validation Methods (Unchanged) ---
+    # --- Validation Methods ---
     def _validate_listener_port(self, port):
         try:
             port_int = int(port)
@@ -77,7 +73,7 @@ class StreamManager:
             raise ValueError(f"Target port {port_int} outside valid range (1-65535)")
         return port_int
 
-    # --- Sanitization/Extraction Methods (Unchanged) ---
+    # --- Sanitization/Extraction Methods ---
     def _sanitize_for_json(self, obj):
         if isinstance(obj, (str, int, float, bool, type(None))):
             return obj
@@ -137,7 +133,7 @@ class StreamManager:
             )
             return str(addr)
 
-    # --- GStreamer Bus/Signal Handlers (Unchanged, but pipeline_description uses modified input_type) ---
+    # --- GStreamer Bus/Signal Handlers ---
     def _on_bus_message(self, bus, message, key):
         t = message.type
         with self.lock:
@@ -310,7 +306,6 @@ class StreamManager:
         factory = Gst.ElementFactory.find(element_name)
         return factory is not None
 
-    # *** ADDED: Generator Pipeline Management ***
     def _start_generator_if_needed(self, resolution):
         """Starts the colorbar generator pipeline for the given resolution if not already running."""
         with self.lock:
@@ -445,7 +440,6 @@ class StreamManager:
                     f"Generator pipeline for {resolution} not found or already stopped."
                 )
 
-    # *** END ADDED ***
 
     # --- start_stream ---
     def start_stream(self, config, use_target_port_as_key=False):
@@ -486,7 +480,7 @@ class StreamManager:
             input_type = config.get("input_type", "multicast")
             self.logger.info(f"Starting stream {key} with input type: {input_type}, RTP Encapsulation: {rtp_encapsulation}")
 
-            # --- Common SRT Sink Parameters (Moved up) ---
+            # --- Common SRT Sink Parameters ---
             overhead_bandwidth = int(config.get("overhead_bandwidth", 2))
             latency_ms = int(config.get("latency", 300))
             encryption = config.get("encryption", "none")
@@ -499,10 +493,10 @@ class StreamManager:
                 "transtype=live",
                 f"latency={latency_ms}",
                 f"peerlatency={latency_ms}",
-                f"rcvbuf={DVB_STANDARD_CONFIG.get('rcvbuf',12058624)}",
-                f"sndbuf={DVB_STANDARD_CONFIG.get('sndbuf',12058624)}",
-                f"fc={DVB_STANDARD_CONFIG.get('fc',8000)}",
-                f"tlpktdrop={str(DVB_STANDARD_CONFIG.get('tlpktdrop',True)).lower()}",
+                f"rcvbuf={8388608}",
+                f"sndbuf={8388608}",
+                f"fc={8192}",
+                f"tlpktdrop={True}",
                 f"overheadbandwidth={overhead_bandwidth}",
                 "nakreport=true",
                 f"streamid=mcr_stream_{key}",
@@ -566,7 +560,6 @@ class StreamManager:
                         f"Invalid smoothing latency '{smoothing_choice}', using default 30ms."
                     )
                 tsparse_name = f"tsparse_{key}"
-                # *** MODIFIED: Removed RTP encapsulation for FILE source ***
                 pipeline_str = (
                     f"{pipeline_input_str} ! "
                     f'tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_latency_us} parse-private-sections=true ! '
@@ -592,13 +585,11 @@ class StreamManager:
                     f"Multicast interface selected: '{selected_interface}', Using: '{interface_to_use}'"
                 )
                 if mc_protocol == "udp":
-                    # *** MODIFIED: Add RTP encapsulation logic here ***
                     if rtp_encapsulation:
                         self.logger.info(f"Enabling RTP encapsulation for stream {key}")
                         rtp_payload_str = "rtpmp2tpay pt=33 mtu=1316 ! queue ! "
                     else:
                         rtp_payload_str = "" # No RTP encapsulation
-                    # *** END MODIFIED ***
                     pipeline_input_str = f'udpsrc uri="udp://{mc_address}:{mc_port}" multicast-iface="{interface_to_use}" buffer-size=20971520 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
                     self.logger.info(
                         f"Using UDP source: udp://{mc_address}:{mc_port} on {interface_to_use}"
@@ -626,7 +617,6 @@ class StreamManager:
                     f"{rtp_payload_str}" # Insert the RTP part (will be empty if not enabled)
                     f'srtsink name="{sink_name}" uri="{srt_uri}" async=false sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}'
                 )
-            # *** MODIFIED: Use Generator -> Multicast -> Consumer approach ***
             elif input_type == "colorbar":
                 resolution = config.get("colorbar_resolution")
                 if not resolution or resolution not in COLORBAR_URIS:
@@ -650,13 +640,11 @@ class StreamManager:
                 tsparse_name = f"tsparse_{key}"
                 srtsink_sync_param = "false"  # Live source from UDP
                 srtsink_wait_param = "true" if mode == "listener" else "false"
-                # *** MODIFIED: Also apply RTP encap for Colorbar (as it uses UDP source) ***
                 if rtp_encapsulation:
                     self.logger.info(f"Enabling RTP encapsulation for colorbar stream {key}")
                     rtp_payload_str = "rtpmp2tpay pt=33 mtu=1316 ! queue ! "
                 else:
                     rtp_payload_str = ""
-                # *** END MODIFIED ***
                 pipeline_str = (
                     f'udpsrc uri="{udp_uri}" ! '
                     f'tsparse name="{tsparse_name}" set-timestamps=true ! '  # Removed smoothing here, tsparse defaults are usually ok
@@ -664,7 +652,6 @@ class StreamManager:
                     f"{rtp_payload_str}" # Insert RTP part here too
                     f'srtsink name="{sink_name}" uri="{srt_uri}" sync={srtsink_sync_param} wait-for-connection={srtsink_wait_param}'
                 )
-            # *** END MODIFIED ***
             else:
                 raise ValueError(f"Unsupported input_type: {input_type}")
 
@@ -761,7 +748,6 @@ class StreamManager:
             )
             self.logger.info(f"Scheduled pipeline start for stream {key}.")
 
-            # Use input_detail_log which was set based on type earlier
             return (
                 True,
                 f"Stream {mode} ({key}) starting: {input_type} '{input_detail_log}'" + (" with RTP" if rtp_encapsulation else ""),
@@ -875,7 +861,7 @@ class StreamManager:
                     del self.active_streams[key]
             return False, f"An unexpected error occurred stopping stream: {str(e)}"
 
-    # --- _extract_stats_from_gstruct (Unchanged) ---
+    # --- _extract_stats_from_gstruct ---
     def _extract_stats_from_gstruct(self, stats_struct):
         result = {}
         raw_stats_string_for_debug = "N/A"
@@ -1071,7 +1057,7 @@ class StreamManager:
                 "raw_string": raw_stats_string_for_debug,
             }
 
-    # --- get_stream_statistics (Unchanged) ---
+    # --- get_stream_statistics ---
     def get_stream_statistics(self, stream_key):
         pipeline = None
         stream_info_copy = None
@@ -1172,7 +1158,7 @@ class StreamManager:
             )
             return {"error": f"Unexpected error retrieving stats: {str(e)}"}
 
-    # --- get_active_streams (Unchanged) ---
+    # --- get_active_streams ---
     def get_active_streams(self):
         try:
             with self.lock:
@@ -1243,7 +1229,7 @@ class StreamManager:
             )
             return {"error": f"Failed to retrieve active streams: {str(e)}"}
 
-    # --- _format_uptime (Unchanged) ---
+    # --- _format_uptime ---
     def _format_uptime(self, seconds):
         try:
             seconds_int = int(seconds)
@@ -1263,7 +1249,7 @@ class StreamManager:
             self.logger.error(f"Error formatting uptime: {e}")
             return "Error"
 
-    # --- get_file_info (Unchanged) ---
+    # --- get_file_info ---
     def get_file_info(self, file_path):
         media_dir = os.path.abspath(self.media_folder)
         base_filename = os.path.basename(file_path)  # Use base filename
@@ -1324,7 +1310,7 @@ class StreamManager:
                 {"error": f"mediainfo execution failed: {str(e)}"}, indent=2
             )
 
-    # --- get_debug_info (Unchanged) ---
+    # --- get_debug_info ---
     def get_debug_info(self, stream_key):
         si_copy = None
         pipeline = None
@@ -1429,14 +1415,12 @@ class StreamManager:
             self.logger.info(f"Requesting stop for SRT stream {k}")
             self.stop_stream(k)  # This already handles removing from active_streams
 
-        # *** ADDED: Stop generator pipelines ***
         with self.lock:
             generator_keys = list(self.generator_pipelines.keys())
             self.logger.info(f"Stopping {len(generator_keys)} generator pipelines...")
         gen_keys_to_stop = list(generator_keys)
         for res in gen_keys_to_stop:
             self._stop_generator(res)  # This handles removing from generator_pipelines
-        # *** END ADDED ***
 
         time.sleep(1.5)  # Allow time for pipelines to transition to NULL
 

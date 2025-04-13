@@ -4,15 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Test - MCR SRT Streamer</title>
-    {# *** MODIFIED TO USE LOCAL ASSETS *** #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}"> {# Font Awesome #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> {# Your Custom CSS #}
-    {# *** END MODIFIED ASSETS *** #}
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
-        /* Styles from original template (can be merged into style.css later) */
-        .header { /* Style moved to style.css */ }
+        /* Keep existing styles */
         .result-value { font-weight: bold; font-size: 1.1rem; }
         .nav-tabs .nav-link { color: #495057; }
         .nav-tabs .nav-link.active { color: #007bff; font-weight: bold; }
@@ -29,279 +25,78 @@
         .reference-section h5 { margin-top: 1.5rem; }
         .reference-section table { margin-top: 1rem; }
         .about-section img { vertical-align: middle; margin: 0 5px; }
-        /* *** Ensure .hidden class is defined *** */
         .hidden { display: none !important; }
         .accordion-body ul { padding-left: 1.5rem; margin-bottom: 0; }
         .accordion-body p:last-child { margin-bottom: 0; }
-
-        /* Ensure spinner animation is present if not in main style.css */
-        .fa-spin {
-            -webkit-animation: fa-spin 2s infinite linear;
-            animation: fa-spin 2s infinite linear;
-        }
-        @-webkit-keyframes fa-spin { 0% { -webkit-transform: rotate(0deg); transform: rotate(0deg); } 100% { -webkit-transform: rotate(359deg); transform: rotate(359deg); } }
-        @keyframes fa-spin { 0% { -webkit-transform: rotate(0deg); transform: rotate(0deg); } 100% { -webkit-transform: rotate(359deg); transform: rotate(359deg); } }
+        .fa-spin { animation: fa-spin 2s infinite linear; }
+        @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(359deg); } }
     </style>
 </head>
 <body>
     <div class="container mt-4">
-        {# --- Header Section with LOGO --- #}
-        <div class="header">
-            <div class="d-flex justify-content-between align-items-center">
-                 <div class="d-flex align-items-center">
-                     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SVT Logo" style="height: 40px; margin-right: 15px;">
-                    <h1><i class="fas fa-network-wired"></i> SRT Network Test</h1>
-                </div>
-                <div>
-                    <a href="{{ url_for('index') }}" class="btn btn-outline-light"> <i class="fas fa-home"></i> Back to Dashboard</a>
-                </div>
-            </div>
-        </div>
-        {# --- End Header Section --- #}
+        {# Header Section #}
+        <div class="header"><div class="d-flex justify-content-between align-items-center"><div class="d-flex align-items-center"><img src="{{ url_for('static', filename='images/logo.png') }}" alt="SVT Logo" style="height: 40px; margin-right: 15px;"><h1><i class="fas fa-network-wired"></i> SRT Network Test</h1></div><div><a href="{{ url_for('index') }}" class="btn btn-outline-light"> <i class="fas fa-home"></i> Back to Dashboard</a></div></div></div>
 
         {# Location Info #}
-        {% if location_info %}
-         <div class="alert alert-secondary"> <i class="fas fa-map-marker-alt"></i> Your detected location: <strong>{{ location_info.ip }}</strong> {% if location_info.continent and location_info.country %} ({{ location_info.country }}, {{ location_info.continent }}) {% elif location_info.continent %} ({{ location_info.continent }}) {% else %} (Location details unavailable) {% endif %} {% if location_info.error and location_info.error != 'Local/Internal IP' %} <strong class="text-danger ms-2">(<i class="fas fa-exclamation-triangle"></i> Lookup Error: {{ location_info.error }})</strong> {% endif %} </div>
-        {% endif %}
+        {% if location_info %}<div class="alert alert-secondary"> <i class="fas fa-map-marker-alt"></i> Your detected location: <strong>{{ location_info.ip }}</strong> {% if location_info.continent and location_info.country %} ({{ location_info.country }}, {{ location_info.continent }}) {% elif location_info.continent %} ({{ location_info.continent }}) {% else %} (Location details unavailable) {% endif %} {% if location_info.location_error %} <strong class="text-danger ms-2">(<i class="fas fa-exclamation-triangle"></i> Lookup Warning: {{ location_info.location_error }})</strong> {% endif %} </div>{% endif %}
 
         {# Error Alert #}
         <div id="test-error-alert" class="alert alert-danger d-none" role="alert"> <i class="fas fa-exclamation-triangle"></i> Network test failed: <span id="test-error-message"></span> </div>
 
         {# Test Configuration Card #}
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white"> <i class="fas fa-cogs"></i> Test Configuration </div>
-            <div class="card-body">
-                {# Display active mechanism #}
-                {% if network_test_mechanism == 'ping_only' %}
-                <div class="alert alert-info small py-2 mb-3" role="alert">
-                    <i class="fas fa-info-circle"></i> Network Test Mechanism: <strong>Ping Only</strong>. (iperf3 tests disabled). Recommendations based on RTT + assumed loss.
-                </div>
-                {% elif network_test_mechanism == 'iperf' %}
-                <div class="alert alert-success small py-2 mb-3" role="alert">
-                     <i class="fas fa-check-circle"></i> Network Test Mechanism: <strong>iperf Enabled</strong>. Uses UDP/TCP tests (requires background job for safe list).
-                </div>
-                {% endif %}
+        <div class="card mb-4"><div class="card-header bg-primary text-white"> <i class="fas fa-cogs"></i> Test Configuration </div><div class="card-body">{% if network_test_mechanism == 'ping_only' %}<div class="alert alert-info small py-2 mb-3" role="alert"><i class="fas fa-info-circle"></i> Network Test Mechanism: <strong>Ping Only</strong>. (iperf3 tests disabled). Recommendations based on RTT + assumed loss.</div>{% elif network_test_mechanism == 'iperf' %}<div class="alert alert-success small py-2 mb-3" role="alert"><i class="fas fa-check-circle"></i> Network Test Mechanism: <strong>iperf Enabled</strong>. Uses UDP/TCP tests (requires background job for safe list).</div>{% endif %}<form id="network-test-form">{% if form.csrf_token %}{{ form.csrf_token }}{% endif %}<div class="mb-3"><label class="form-label">Mode</label><br>{% for subfield in form.mode %}<div class="form-check form-check-inline">{{ subfield(class="form-check-input") }}{{ subfield.label(class="form-check-label") }}</div>{% endfor %}<div class="form-text">Auto modes use UDP (if iperf mechanism enabled) or Ping only. Manual allows TCP/UDP (if iperf enabled) or Ping only.</div></div><div id="regional-options" class="mb-3 hidden">{{ form.region.label(class="form-label") }}{{ form.region(class="form-select") }}<div class="form-text">Test up to 3 random regional servers (UDP only, requires 'iperf' mechanism).</div></div><div id="manual-options" class="mb-3 hidden"><div class="row"><div class="col-md-6"> {{ form.manual_host.label(class="form-label") }} {{ form.manual_host(class="form-control") }} </div><div class="col-md-3"> {{ form.manual_port.label(class="form-label") }} {{ form.manual_port(class="form-control") }} <div class="form-text">Default: 5201</div> </div><div class="col-md-3" id="manual-protocol-group"> {{ form.manual_protocol.label(class="form-label") }} {{ form.manual_protocol(class="form-select") }} </div></div></div><div class="row mb-3"><div class="col-md-6"> {{ form.duration.label(class="form-label") }} {{ form.duration(class="form-control") }} <div class="form-text">Test duration (seconds). Range: 3-10.</div> </div><div class="col-md-6" id="bitrate-group"> {{ form.bitrate.label(class="form-label") }} {{ form.bitrate(class="form-select") }} <div class="form-text">Target bitrate for UDP test (Manual mode only).</div> </div></div><button type="submit" class="btn btn-primary" id="run-test-btn"><i class="fas fa-play-circle"></i> Run Network Test</button></form><div id="test-progress" class="mt-3 d-none"><div class="progress progress-thin mb-2"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div></div><p class="text-center text-muted mb-0"><i class="fas fa-sync fa-spin"></i> Testing network conditions... This may take some time.</p></div></div></div>
 
-                <form id="network-test-form">
-                    {% if form.csrf_token %}{{ form.csrf_token }}{% endif %}
-                    {# Mode Selection - Fixed Label #}
-                    <div class="mb-3">
-                         <label class="form-label">Mode</label><br> {# Use simple label #}
-                         {% for subfield in form.mode %}
-                            <div class="form-check form-check-inline">
-                                {{ subfield(class="form-check-input") }}
-                                {{ subfield.label(class="form-check-label") }}
-                            </div>
-                         {% endfor %}
-                         {# Updated help text #}
-                         <div class="form-text">Auto modes use UDP (if iperf mechanism enabled) or Ping only. Manual allows TCP/UDP (if iperf enabled) or Ping only.</div>
-                     </div>
-
-                    {# Regional Options #}
-                     <div id="regional-options" class="mb-3 hidden">
-                        {{ form.region.label(class="form-label") }}
-                        {{ form.region(class="form-select") }}
-                        {# Updated help text #}
-                        <div class="form-text">Test up to 3 random regional servers (UDP only, requires 'iperf' mechanism).</div>
-                     </div>
-
-                    {# Manual Options #}
-                    <div id="manual-options" class="mb-3 hidden">
-                        <div class="row">
-                             <div class="col-md-6"> {{ form.manual_host.label(class="form-label") }} {{ form.manual_host(class="form-control") }} </div>
-                             <div class="col-md-3"> {{ form.manual_port.label(class="form-label") }} {{ form.manual_port(class="form-control") }} <div class="form-text">Default: 5201</div> </div>
-                             <div class="col-md-3" id="manual-protocol-group"> {{ form.manual_protocol.label(class="form-label") }} {{ form.manual_protocol(class="form-select") }} </div>
-                         </div>
-                    </div>
-
-                    {# Duration and Bitrate Row #}
-                    <div class="row mb-3">
-                         <div class="col-md-6"> {{ form.duration.label(class="form-label") }} {{ form.duration(class="form-control") }} <div class="form-text">Test duration (seconds). Range: 3-10.</div> </div>
-                         <div class="col-md-6" id="bitrate-group"> {{ form.bitrate.label(class="form-label") }} {{ form.bitrate(class="form-select") }} <div class="form-text">Target bitrate for UDP test (Manual mode only).</div> </div>
-                     </div>
-
-                    {# Run Button #}
-                    <button type="submit" class="btn btn-primary" id="run-test-btn">
-                        <i class="fas fa-play-circle"></i> Run Network Test
-                    </button>
-                </form>
-
-                 {# Progress Indicator #}
-                <div id="test-progress" class="mt-3 d-none">
-                     <div class="progress progress-thin mb-2"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div></div>
-                     <p class="text-center text-muted mb-0">
-                         <i class="fas fa-sync fa-spin"></i> Testing network conditions... This may take some time.
-                     </p>
-                 </div>
-            </div>
-        </div>
-
-         {# Test Results Card #}
+        {# Test Results Card (Remains hidden initially) #}
         <div id="test-results" class="card mb-4 d-none">
-             {# ... Content remains the same ... #}
              <div class="card-header bg-success text-white"> <i class="fas fa-chart-bar"></i> Test Results </div>
              <div class="card-body">
                  <div class="row mb-4"> <div class="col-md-6"> <h5><i class="fas fa-server"></i> Server Tested</h5> <p id="result-server-label" class="result-value">-</p> <p id="result-server-location" class="text-muted small">-</p> </div> <div class="col-md-6"> <h5><i class="fas fa-tachometer-alt"></i> Network Measurements</h5> <table class="table table-sm table-borderless"> <tbody> <tr><th width="130">RTT (Avg):</th><td id="result-rtt" class="result-value">-</td></tr> <tr><th>Packet Loss (Max):</th><td id="result-loss" class="result-value">-</td></tr> <tr><th>Jitter (Avg):</th><td id="result-jitter" class="result-value">-</td></tr> <tr><th>Bandwidth (Avg):</th> <td> <span id="result-bandwidth" class="result-value">-</span> <span id="result-bandwidth-type" class="badge bg-secondary ms-1"></span> </td> </tr> </tbody> </table> </div> </div>
                  <div class="card border-info mb-4"> <div class="card-header bg-info text-white"><i class="fas fa-wrench"></i> Recommended Minimum SRT Settings</div> <div class="card-body"> <div class="row"> <div class="col-md-6 mb-3 mb-md-0"> <div class="card h-100 parameter-card"> <div class="card-body text-center"> <h5 class="card-title">SRT Latency <i class="fas fa-info-circle parameter-help" data-bs-toggle="tooltip" title="How long SRT waits for packets (buffer size in time). Higher values allow more time for packet recovery but increase end-to-end delay. Calculated as RTT Multiplier x RTT."></i></h5> <div class="recommendation-value" id="result-latency">-</div> <p class="card-text text-muted">milliseconds</p> <div class="progress progress-thin mb-2"><div class="progress-bar bg-info" id="latency-bar" role="progressbar" style="width: 0%"></div></div> <div class="small text-muted">RTT Multiplier: <span id="result-multiplier-inline">-</span></div> </div> </div> </div> <div class="col-md-6"> <div class="card h-100 parameter-card"> <div class="card-body text-center"> <h5 class="card-title">Bandwidth Overhead % <i class="fas fa-info-circle parameter-help" data-bs-toggle="tooltip" title="Extra bandwidth percentage allocated above the stream's A/V bitrate for SRT control packets and retransmissions. Higher loss requires more overhead."></i></h5> <div class="recommendation-value" id="result-overhead">-</div> <p class="card-text text-muted">percent</p> <div class="progress progress-thin mb-2"><div class="progress-bar bg-success" id="overhead-bar" role="progressbar" style="width: 0%"></div></div> <div class="small text-muted">Based on <span id="loss-percent-inline">-</span>% loss</div> </div> </div> </div> </div> <div class="card-footer bg-transparent"> <p id="recommendation-note" class="small text-muted text-center mb-2">Recommendations based on Haivision SRT Guide using measured/estimated metrics.</p> <button id="apply-settings-btn" class="btn btn-success btn-lg w-100 py-3"><i class="fas fa-check-circle"></i> Apply These Settings to New Listener Stream Form</button> </div> </div>
-                 <div id="explanation-card" class="card border-light mt-4">
-                     <div class="card-header bg-light"><i class="fas fa-book-open"></i> SRT Parameter Reference (Based on Haivision SRT Deployment Guide v1.5.x)</div>
-                     <div class="card-body reference-section">
-                         <div class="accordion" id="srtReferenceAccordion">
-                              {# ... Accordion items remain unchanged ... #}
-                              <div class="accordion-item"> <h2 class="accordion-header" id="headingRTT"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRTT"> Round Trip Time (RTT) </button> </h2> <div id="collapseRTT" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>Round Trip Time (RTT) is the time it takes for a packet to travel from a source to a destination and back again. It provides an indication of the network distance between endpoints.</p> <ul> <li>Can be measured using the `ping` command or observed in SRT statistics.</li> <li>Typical RTTs (examples from guide): LAN (&lt; 1ms), Continental US (60-100ms), Transoceanic (60-200+ms).</li> <li>RTT is used as a guide when configuring SRT Latency and Bandwidth Overhead.</li> </ul> </div> </div> </div> <div class="accordion-item"> <h2 class="accordion-header" id="headingLatency"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLatency"> SRT Latency & RTT Multiplier </button> </h2> <div id="collapseLatency" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>SRT Latency determines the size of the buffer (in milliseconds) used for managing packet jitter and retransmissions. It's a fixed value (typically 80-8000 ms) set on the sender and receiver; the higher of the two values is used for the stream.</p> <p>It should be set based on RTT and network stability. The calculation involves an <strong>RTT Multiplier</strong>:</p> <p><code>SRT Latency = RTT Multiplier * RTT</code></p> <ul> <li>The RTT Multiplier reflects how many attempts SRT might make to resend a packet before dropping it, compensating for network congestion.</li> <li>A higher multiplier (and thus higher latency) is needed for links with higher constant packet loss to increase the chance of recovery.</li> <li>A common rule of thumb for good networks (low loss) is a multiplier of ~4.</li> </ul> </div> </div> </div> <div class="accordion-item"> <h2 class="accordion-header" id="headingLoss"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLoss"> Packet Loss Rate (%) </button> </h2> <div id="collapseLoss" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>Measures network congestion as the percentage of packets lost compared to packets sent. It drives the Latency and Overhead calculations.</p> <ul> <li><strong>Constant Loss:</strong> Packets lost at a steady rate. Requires relatively low overhead but potentially higher latency for recovery.</li> <li><strong>Burst Loss:</strong> Multiple consecutive packets lost. Requires higher Bandwidth Overhead to recover the block of data quickly within the Latency window. Burst loss lasting longer than the SRT Latency setting will cause stream artifacts.</li> <li>This tool's recommendations are primarily based on a constant loss model.</li> </ul> </div> </div> </div> <div class="accordion-item"> <h2 class="accordion-header" id="headingOverhead"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOverhead"> Bandwidth Overhead (%) </button> </h2> <div id="collapseOverhead" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>Specifies extra bandwidth allocated above the stream's main A/V bitrate, used for SRT control packets and retransmitting lost media packets.</p> <ul> <li>Calculated as a percentage of the A/V bitrate.</li> <li>Noisier networks with higher packet loss require a higher overhead percentage.</li> <li>The total required bandwidth (Stream Bitrate + Overhead) must be less than the available channel capacity. The guide recommends headroom (e.g., <code>0.75 * Channel Capacity > SRT Stream Bandwidth * (1 + Overhead/100)</code>).</li> <li>Burst loss requires significantly more overhead than constant loss, especially at low latencies.</li> </ul> </div> </div> </div> <div class="accordion-item"> <h2 class="accordion-header" id="headingTable"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTable"> Configuration Guidance Table (Constant Loss Model) </button> </h2> <div id="collapseTable" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body table-responsive"> <p>This table provides estimated starting points based on measured <strong>constant</strong> packet loss. Burst loss may require higher overhead, especially at lower RTT multipliers.</p> <table class="table table-bordered table-striped table-sm"> <thead class="table-light"><tr><th>Packet Loss Rate (%)</th><th>Min. RTT Multiplier</th><th>Bandwidth Overhead (%)</th><th>Min. SRT Latency (for RTT <= 20ms)</th></tr></thead> <tbody> <tr><td>&lt;= 1</td><td>3</td><td>1</td><td>60 ms</td></tr> <tr><td>&lt;= 3</td><td>4</td><td>4</td><td>80 ms</td></tr> <tr><td>&lt;= 7</td><td>6</td><td>9</td><td>120 ms</td></tr> <tr><td>&lt;= 10</td><td>8</td><td>15</td><td>160 ms</td></tr> <tr><td>&lt;= 12</td><td>8</td><td>20</td><td>160 ms</td></tr> <tr><td>&lt;= 20</td><td>10</td><td>38</td><td>200 ms</td></tr> <tr><td>&lt;= 25</td><td>13</td><td>46</td><td>260 ms</td></tr> <tr><td>&lt;= 27</td><td>14</td><td>50</td><td>280 ms</td></tr> <tr><td>&lt;= 30</td><td>14</td><td>61</td><td>280 ms</td></tr> <tr><td>&lt;= 40</td><td>30</td><td>97</td><td>600 ms</td></tr> <tr><td>&gt; 40</td><td>30+</td><td>97+</td><td>&gt; 600 ms</td></tr> </tbody> </table> <p class="small text-muted">Note: These numbers are conservative guidance based on a model; real-world performance may vary based on network conditions and device capabilities.</p> </div> </div> </div>
-                         </div>
-                     </div>
+             </div>
+        </div>
+
+        {# *** MOVED Explanation Card OUTSIDE and BELOW results card *** #}
+        <div id="explanation-card" class="card border-light mt-4 mb-4">
+             <div class="card-header bg-light"><i class="fas fa-book-open"></i> SRT Parameter Reference (Based on Haivision SRT Deployment Guide v1.5.x)</div>
+             <div class="card-body reference-section">
+                 <div class="accordion" id="srtReferenceAccordion">
+                     <div class="accordion-item"> <h2 class="accordion-header" id="headingRTT"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRTT"> Round Trip Time (RTT) </button> </h2> <div id="collapseRTT" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>Round Trip Time (RTT) is the time it takes for a packet to travel from a source to a destination and back again. It provides an indication of the network distance between endpoints.</p> <ul> <li>Can be measured using the `ping` command or observed in SRT statistics.</li> <li>Typical RTTs (examples from guide): LAN (&lt; 1ms), Continental US (60-100ms), Transoceanic (60-200+ms).</li> <li>RTT is used as a guide when configuring SRT Latency and Bandwidth Overhead.</li> </ul> </div> </div> </div>
+                     <div class="accordion-item"> <h2 class="accordion-header" id="headingLatency"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLatency"> SRT Latency & RTT Multiplier </button> </h2> <div id="collapseLatency" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>SRT Latency determines the size of the buffer (in milliseconds) used for managing packet jitter and retransmissions. It's a fixed value (typically 80-8000 ms) set on the sender and receiver; the higher of the two values is used for the stream.</p> <p>It should be set based on RTT and network stability. The calculation involves an <strong>RTT Multiplier</strong>:</p> <p><code>SRT Latency = RTT Multiplier * RTT</code></p> <ul> <li>The RTT Multiplier reflects how many attempts SRT might make to resend a packet before dropping it, compensating for network congestion.</li> <li>A higher multiplier (and thus higher latency) is needed for links with higher constant packet loss to increase the chance of recovery.</li> <li>A common rule of thumb for good networks (low loss) is a multiplier of ~4.</li> </ul> </div> </div> </div>
+                     <div class="accordion-item"> <h2 class="accordion-header" id="headingLoss"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLoss"> Packet Loss Rate (%) </button> </h2> <div id="collapseLoss" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>Measures network congestion as the percentage of packets lost compared to packets sent. It drives the Latency and Overhead calculations.</p> <ul> <li><strong>Constant Loss:</strong> Packets lost at a steady rate. Requires relatively low overhead but potentially higher latency for recovery.</li> <li><strong>Burst Loss:</strong> Multiple consecutive packets lost. Requires higher Bandwidth Overhead to recover the block of data quickly within the Latency window. Burst loss lasting longer than the SRT Latency setting will cause stream artifacts.</li> <li>This tool's recommendations are primarily based on a constant loss model.</li> </ul> </div> </div> </div>
+                     <div class="accordion-item"> <h2 class="accordion-header" id="headingOverhead"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOverhead"> Bandwidth Overhead (%) </button> </h2> <div id="collapseOverhead" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body"> <p>Specifies extra bandwidth allocated above the stream's main A/V bitrate, used for SRT control packets and retransmitting lost media packets.</p> <ul> <li>Calculated as a percentage of the A/V bitrate.</li> <li>Noisier networks with higher packet loss require a higher overhead percentage.</li> <li>The total required bandwidth (Stream Bitrate + Overhead) must be less than the available channel capacity. The guide recommends headroom (e.g., <code>0.75 * Channel Capacity > SRT Stream Bandwidth * (1 + Overhead/100)</code>).</li> <li>Burst loss requires significantly more overhead than constant loss, especially at low latencies.</li> </ul> </div> </div> </div>
+                     <div class="accordion-item"> <h2 class="accordion-header" id="headingTable"> <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTable"> Configuration Guidance Table (Constant Loss Model) </button> </h2> <div id="collapseTable" class="accordion-collapse collapse" data-bs-parent="#srtReferenceAccordion"> <div class="accordion-body table-responsive"> <p>This table provides estimated starting points based on measured <strong>constant</strong> packet loss. Burst loss may require higher overhead, especially at lower RTT multipliers.</p> <table class="table table-bordered table-striped table-sm"> <thead class="table-light"><tr><th>Packet Loss Rate (%)</th><th>Min. RTT Multiplier</th><th>Bandwidth Overhead (%)</th><th>Min. SRT Latency (for RTT <= 20ms)</th></tr></thead> <tbody> <tr><td>&lt;= 1</td><td>3</td><td>1</td><td>60 ms</td></tr> <tr><td>&lt;= 3</td><td>4</td><td>4</td><td>80 ms</td></tr> <tr><td>&lt;= 7</td><td>6</td><td>9</td><td>120 ms</td></tr> <tr><td>&lt;= 10</td><td>8</td><td>15</td><td>160 ms</td></tr> <tr><td>&lt;= 12</td><td>8</td><td>20</td><td>160 ms</td></tr> <tr><td>&lt;= 20</td><td>10</td><td>38</td><td>200 ms</td></tr> <tr><td>&lt;= 25</td><td>13</td><td>46</td><td>260 ms</td></tr> <tr><td>&lt;= 27</td><td>14</td><td>50</td><td>280 ms</td></tr> <tr><td>&lt;= 30</td><td>14</td><td>61</td><td>280 ms</td></tr> <tr><td>&lt;= 40</td><td>30</td><td>97</td><td>600 ms</td></tr> <tr><td>&gt; 40</td><td>30+</td><td>97+</td><td>&gt; 600 ms</td></tr> </tbody> </table> <p class="small text-muted">Note: These numbers are conservative guidance based on a model; real-world performance may vary based on network conditions and device capabilities.</p> </div> </div> </div>
                  </div>
              </div>
-         </div>
-
-         {# Footer Section #}
-        <div class="about-section mt-5 text-center">
-            <hr>
-            <p class="small">Network test uses `ping`{% if network_test_mechanism == 'iperf' %} and `iperf3` (UDP/TCP){% endif %}. Recommendations may use assumed loss if iperf3 is disabled or fails.</p>
-            <p class="small"> Public iperf3 server list data provided by <a href="https://iperf3serverlist.net/" target="_blank" rel="noopener noreferrer">iperf3serverlist.net</a>. Used under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a>. <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/license-MIT-green.svg?color=0066ff&style=flat-square&label=License" alt="License: MIT"></a> </p>
         </div>
+        {# *** END MOVED Explanation Card *** #}
+
+
+        {# Footer Section (Standardized) #}
+        <footer class="mt-5 mb-3 text-center text-muted">
+            <hr>
+            {# Main Copyright and License (Applies to all pages) #}
+            <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank" rel="noopener noreferrer">BSD-2-Clause License</a>.</p>
+            {# Font Information #}
+            <p class="small">Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html" target="_blank" rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.</p>
+            {# Additional Info specific to the Network Test page #}
+            {% if request.endpoint == 'network_test_page' %}
+               <p class="small">Network test uses `ping`{% if network_test_mechanism == 'iperf' %} and `iperf3` (UDP/TCP){% endif %}. Recommendations may use assumed loss if iperf3 is disabled or fails.</p>
+               <p class="small"> Public iperf3 server list data provided by <a href="https://iperf3serverlist.net/" target="_blank" rel="noopener noreferrer">iperf3serverlist.net</a>, used under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+            {% endif %}
+        </footer>
 
     </div> {# End Container #}
 
-    {# JavaScript Section #}
+    {# --- REMOVED Inline JavaScript --- #}
+
+    {# --- Links to External JavaScript --- #}
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
-    <script>
-        $(document).ready(function() {
-            // Tooltips
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) });
-
-            // Mode Switching Logic with field hiding
-            const form = $('#network-test-form');
-            const regionalOptions = $('#regional-options');
-            const manualOptions = $('#manual-options');
-            const manualProtocolGroup = $('#manual-protocol-group');
-            const bitrateGroup = $('#bitrate-group');
-
-            function toggleOptions() {
-                const selectedMode = form.find('input[name="mode"]:checked').val();
-                const isManual = selectedMode === 'manual';
-                regionalOptions.toggleClass('hidden', selectedMode !== 'regional');
-                manualOptions.toggleClass('hidden', !isManual);
-                manualProtocolGroup.toggleClass('hidden', !isManual);
-                bitrateGroup.toggleClass('hidden', !isManual);
-            }
-            form.find('input[name="mode"]').on('change', toggleOptions);
-            toggleOptions(); // Initial call
-
-            // AJAX Form Submission
-            $('#network-test-form').submit(function(e) {
-                 e.preventDefault();
-                 $('#test-progress').removeClass('d-none'); $('#run-test-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Testing...');
-                 $('#test-results').addClass('d-none'); $('#test-error-alert').addClass('d-none');
-                 const formData = $(this).serialize();
-                 // console.log("Submitting Form Data:", formData); // Debug log removed
-                 $.ajax({ url: '/api/network_test', type: 'POST', data: formData, dataType: 'json',
-                     success: function(data) {
-                          // console.log("Received data:", data); // Debug log removed
-                          if (data.error && data.rtt_ms === null) { showError('Test failed: ' + data.error); }
-                          else {
-                               displayResults(data); // Call displayResults
-                               $('#recommendation-note').text(data.error || 'Recommendations based on Haivision SRT Guide for measured conditions.')
-                                    .removeClass('text-danger text-warning text-muted')
-                                    .addClass(data.error ? 'text-warning' : 'text-muted');
-                          }
-                     },
-                     error: function(xhr) { console.error("AJAX error:", xhr.status, xhr.responseText); let errorMsg = 'Request failed.'; if (xhr.responseJSON) { if (xhr.responseJSON.error && xhr.responseJSON.details) { let detailMsg = typeof xhr.responseJSON.details==='object'?Object.entries(xhr.responseJSON.details).map(([f,m])=>`${f}: ${m}`).join('; '):String(xhr.responseJSON.details); errorMsg=`${xhr.responseJSON.error}: ${detailMsg}`; } else if(xhr.responseJSON.error){errorMsg=xhr.responseJSON.error;} } else if (xhr.responseText){errorMsg=`Server error: ${xhr.status} ${xhr.statusText||''}`;} showError(errorMsg); },
-                     complete: function() { $('#test-progress').addClass('d-none'); $('#run-test-btn').prop('disabled', false).html('<i class="fas fa-play-circle"></i> Run Network Test'); }
-                 });
-            });
-
-             function showError(message) {
-                 // console.error("showError called with:", message); // Debug log removed
-                 $('#test-error-message').text(message);
-                 $('#test-error-alert').removeClass('d-none');
-                 $('#test-results').addClass('d-none');
-             }
-
-            function displayResults(data){
-                 // Debugging console logs removed
-                 // console.log('displayResults started with data:', JSON.stringify(data));
-
-                 $('#test-results').removeClass('d-none');
-                 $('#test-error-alert').addClass('d-none');
-
-                 $('#result-server-label').text(data.server || 'N/A');
-                 $('#result-server-location').text(data.server_location || '');
-                 $('#result-rtt').text(data.rtt_ms ? data.rtt_ms.toFixed(1) + ' ms' : 'N/A');
-                 $('#result-loss').text(data.loss_percent !== null ? data.loss_percent.toFixed(2) + '%' : (data.bandwidth_type === 'TCP' || data.bandwidth_type === 'N/A' ? 'N/A' : 'N/A'));
-                 $('#result-jitter').text(data.jitter_ms !== null ? data.jitter_ms.toFixed(2) + ' ms' : (data.bandwidth_type === 'TCP' || data.bandwidth_type === 'N/A' ? 'N/A' : 'N/A'));
-                 $('#result-bandwidth').text(data.bandwidth_mbps ? data.bandwidth_mbps + ' Mbps' : 'N/A');
-                 const bwElem = $('#result-bandwidth-type');
-                 if(data.bandwidth_type && data.bandwidth_type !== 'N/A'){
-                    bwElem.text(data.bandwidth_type).removeClass('d-none bg-secondary bg-info bg-warning').addClass(data.bandwidth_type === 'TCP' ? 'bg-info' : 'bg-warning');
-                 } else {
-                    bwElem.addClass('d-none');
-                 }
-                 $('#result-latency').text(data.latency_recommendation !== null ? data.latency_recommendation : '-');
-                 $('#result-multiplier-inline').text(data.rtt_multiplier ? data.rtt_multiplier + 'x' : '-');
-                 $('#result-overhead').text(data.overhead_recommendation !== null ? data.overhead_recommendation : '-');
-                 $('#loss-percent-inline').text(data.loss_percent !== null ? data.loss_percent.toFixed(2) : '-');
-
-                 updateProgressBars(data);
-                 setQualityIndicators(data);
-                 $('html, body').animate({scrollTop: $("#test-results").offset().top - 20}, 500);
-
-                 // Debugging console log removed
-                 // console.log('displayResults finished.');
-             }
-
-             function updateProgressBars(data){
-                 // Debugging console log removed
-                 // console.log("Updating progress bars");
-                 const latP = data.latency_recommendation !== null ? Math.min(100, (data.latency_recommendation / 1000) * 100) : 0;
-                 $('#latency-bar').css('width', latP + '%').removeClass('bg-success bg-warning bg-danger bg-info').addClass('bg-info');
-                 const ovP = data.overhead_recommendation !== null ? Math.min(100, (data.overhead_recommendation / 100) * 100) : 0;
-                 $('#overhead-bar').css('width', ovP + '%').removeClass('bg-success bg-warning bg-danger bg-info').addClass('bg-success');
-             }
-
-             function setQualityIndicators(data){
-                 // Debugging console log removed
-                 // console.log("Setting quality indicators");
-                 $('#result-rtt, #result-loss, #result-jitter, #result-latency, #result-overhead').removeClass('good-value moderate-value poor-value');
-                 let rttC = 'good-value';
-                 if(data.rtt_ms > 250) rttC = 'poor-value';
-                 else if(data.rtt_ms > 100) rttC = 'moderate-value';
-                 $('#result-rtt').addClass(rttC);
-
-                 let lossC = 'good-value';
-                 if(data.loss_percent === null || data.bandwidth_type === 'TCP' || data.bandwidth_type === 'N/A') lossC = ''; // No color if N/A
-                 else if(data.loss_percent > 7.0) lossC = 'poor-value';
-                 else if(data.loss_percent > 1.0) lossC = 'moderate-value';
-                 $('#result-loss').addClass(lossC);
-                 $('#loss-percent-inline').parent().removeClass('good-value moderate-value poor-value').addClass(lossC);
-
-                 let jitC = 'good-value';
-                 if(data.jitter_ms === null || data.bandwidth_type === 'TCP' || data.bandwidth_type === 'N/A') jitC = ''; // No color if N/A
-                 else if(data.jitter_ms > 50) jitC = 'poor-value';
-                 else if(data.jitter_ms > 20) jitC = 'moderate-value';
-                 $('#result-jitter').addClass(jitC);
-
-                 $('#result-latency').addClass(rttC); // Latency color mirrors RTT color
-                 $('#result-overhead').addClass(lossC); // Overhead color mirrors Loss color
-                 $('#result-multiplier-inline').parent().removeClass('good-value moderate-value poor-value').addClass(lossC);
-             }
-
-             $('#apply-settings-btn').click(function(){
-                 const l = $('#result-latency').text();
-                 const o = $('#result-overhead').text();
-                 if(l !== '-' && o !== '-' && !isNaN(parseInt(l)) && !isNaN(parseInt(o))){
-                     window.location.href = `${window.location.origin}/?apply_network_test=true&latency=${l}&overhead=${o}`;
-                 } else {
-                     alert('Cannot apply settings, invalid results.');
-                 }
-             });
-
-        }); // End document.ready
-    </script>
+    {# Chart.js is NOT needed on this page #}
+    {# Shared Helpers #}
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {# Page Specific Logic #}
+    <script src="{{ url_for('static', filename='js/network_test.js') }}"></script>
 
 </body>
 </html>
