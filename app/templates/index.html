@@ -107,7 +107,7 @@
         <footer class="mt-5 mb-3 text-center text-muted">
              <hr>
              <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank" rel="noopener noreferrer">BSD-2-Clause License</a>.</p>
-             <p class="small">Uses the <a href="https://svt.se/brand/typografi" target="_blank" rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.</p>
+             <p class="small">Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html" target="_blank" rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.</p>
              {% if request.endpoint == 'network_test_page' %} {# This block will not render on index.html #}
                 <p class="small">Network test uses `ping`{% if network_test_mechanism == 'iperf' %} and `iperf3` (UDP/TCP){% endif %}. Recommendations may use assumed loss if iperf3 is disabled or fails.</p>
                 <p class="small"> Public iperf3 server list data provided by <a href="https://iperf3serverlist.net/" target="_blank" rel="noopener noreferrer">iperf3serverlist.net</a>, used under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
