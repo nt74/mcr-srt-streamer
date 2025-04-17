@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMPTE 2022-7 Pair - MCR SRT Streamer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+     <style>
+        .form-text { font-size: 0.85rem; }
+        .input-group-text { min-width: 40px; justify-content: center; }
+        .card-header.bg-info { color: #000 !important; } /* Example styling */
+        .hidden-input { display: none !important; } /* Use !important for JS toggle */
+        .smpte-leg-section { border-left: 3px solid var(--bs-info); padding-left: 15px; margin-bottom: 1rem;}
+        .smpte-leg-header { margin-bottom: 1rem; color: var(--bs-info); font-weight: bold;}
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        {# Header Section #}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+             <div class="d-flex align-items-center">
+                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="height: 40px; margin-right: 15px;" onerror="this.style.display='none'">
+                 <h1><i class="fas fa-project-diagram"></i> Configure SMPTE 2022-7 Pair</h1>
+             </div>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        </div>
+
+        {# Flash Messages & Errors #}
+        {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+        {% endfor %}{% endif %}{% endwith %}
+        {% if error %}<div class="alert alert-danger alert-dismissible fade show" role="alert">{{ error }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endif %}
+        {% if form.errors %} {% for field, error_list in form.errors.items() %} {% if field != 'csrf_token' %} <div class="alert alert-warning alert-dismissible fade show" role="alert"> <strong>{{ form[field].label.text or field|replace('_',' ')|title }}:</strong> {{ error_list | join(', ') }} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> </div> {% endif %} {% endfor %} {% endif %}
+
+
+        <div class="card mb-4">
+            <div class="card-header bg-info text-dark"><i class="fas fa-cogs"></i> SMPTE Pair Configuration</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('smpte.smpte_config_page') }}" id="smpte-pair-form">
+                    {{ form.csrf_token }}
+                    {{ form.pair_id }} {# Hidden field #}
+
+                    {# Input Source Section #}
+                    <fieldset class="mb-4">
+                        <legend class="fs-5 border-bottom pb-1 mb-3">Input Source</legend>
+                         <div class="mb-3">
+                             {{ form.input_type.label(class="form-label") }}
+                             {{ form.input_type(class="form-select" + (' is-invalid' if form.input_type.errors else '')) }}
+                             <div id="smpteInputTypeHelp" class="form-text">Select the single source for both legs.</div>
+                             {% if form.input_type.errors %}<div class="invalid-feedback d-block">{% for error in form.input_type.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                         </div>
+                         <div id="smpte-multicast-group" class="mb-3 hidden-input">
+                            <div class="mb-3">
+                                {{ form.multicast_channel.label(class="form-label") }}
+                                {{ form.multicast_channel(class="form-select" + (' is-invalid' if form.multicast_channel.errors else '')) }}
+                                <div id="smpteMulticastHelp" class="form-text">Select predefined multicast channel (from iptv_channels.json).</div>
+                                {% if form.multicast_channel.errors %}<div class="invalid-feedback d-block">{% for error in form.multicast_channel.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.multicast_interface.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.multicast_interface.description }}"></i>
+                                {{ form.multicast_interface(class="form-select" + (' is-invalid' if form.multicast_interface.errors else '')) }}
+                                {% if form.multicast_interface.errors %}<div class="invalid-feedback d-block">{% for error in form.multicast_interface.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+                    </fieldset>
+
+                     {# Shared Parameters Section #}
+                    <fieldset class="mb-4">
+                        <legend class="fs-5 border-bottom pb-1 mb-3">Shared SRT & RTP Parameters</legend>
+                         <div class="mb-3">
+                             {{ form.ssrc.label(class="form-label") }}
+                             <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.ssrc.description }}"></i>
+                             {{ form.ssrc(class="form-control" + (' is-invalid' if form.ssrc.errors else '')) }}
+                             {% if form.ssrc.errors %}<div class="invalid-feedback d-block">{% for error in form.ssrc.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                         </div>
+                         <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.latency.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.latency.description }}"></i>
+                                <div class="input-group">
+                                    {{ form.latency(class="form-control" + (' is-invalid' if form.latency.errors else '')) }}
+                                    <span class="input-group-text">ms</span>
+                                </div>
+                                {% if form.latency.errors %}<div class="invalid-feedback d-block">{% for error in form.latency.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.overhead_bandwidth.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.overhead_bandwidth.description }}"></i>
+                                {{ form.overhead_bandwidth(class="form-control" + (' is-invalid' if form.overhead_bandwidth.errors else '')) }}
+                                {% if form.overhead_bandwidth.errors %}<div class="invalid-feedback d-block">{% for error in form.overhead_bandwidth.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+                        {# *** ADDED SMOOTHING LATENCY FIELD *** #}
+                        <div class="mb-3">
+                            {{ form.smoothing_latency_ms.label(class="form-label") }}
+                            <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.smoothing_latency_ms.description }}"></i>
+                            <div class="input-group">
+                                {{ form.smoothing_latency_ms(class="form-control" + (' is-invalid' if form.smoothing_latency_ms.errors else '')) }}
+                                <span class="input-group-text">ms</span>
+                            </div>
+                            {% if form.smoothing_latency_ms.errors %}<div class="invalid-feedback d-block">{% for error in form.smoothing_latency_ms.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+                        {# *** END ADDED FIELD *** #}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.encryption.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.encryption.description }}"></i>
+                                {{ form.encryption(class="form-select" + (' is-invalid' if form.encryption.errors else ''), id="encryption_smpte") }}
+                                {% if form.encryption.errors %}<div class="invalid-feedback d-block">{% for error in form.encryption.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 smpte-encryption-options" style="display: none;"> {# Class used by JS #}
+                                {{ form.passphrase.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.passphrase.description }}"></i>
+                                {{ form.passphrase(class="form-control" + (' is-invalid' if form.passphrase.errors else ''), placeholder="Min 10, Max 79 chars") }}
+                                {% if form.passphrase.errors %}<div class="invalid-feedback d-block">{% for error in form.passphrase.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                         </div>
+                         <div class="mb-3">
+                             <div class="form-check">
+                                 {{ form.qos(class="form-check-input" + (' is-invalid' if form.qos.errors else '')) }}
+                                 {{ form.qos.label(class="form-check-label") }}
+                                 <i class="fas fa-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="{{ form.qos.description }}"></i>
+                                 {% if form.qos.errors %} <div class="invalid-feedback d-block">{% for error in form.qos.errors %}{{ error }}{% endfor %}</div> {% endif %}
+                             </div>
+                         </div>
+                    </fieldset>
+
+                     {# Leg 1 Section #}
+                    <fieldset class="smpte-leg-section mb-4">
+                         <legend class="fs-6 smpte-leg-header">Leg 1 Output</legend>
+                         <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.output_interface_1.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.output_interface_1.description }}"></i>
+                                {{ form.output_interface_1(class="form-select" + (' is-invalid' if form.output_interface_1.errors else '')) }}
+                                {% if form.output_interface_1.errors %}<div class="invalid-feedback d-block">{% for error in form.output_interface_1.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                             <div class="col-md-6">
+                                {{ form.port_1.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.port_1.description }}"></i>
+                                {{ form.port_1(class="form-control" + (' is-invalid' if form.port_1.errors else '')) }}
+                                {% if form.port_1.errors %}<div class="invalid-feedback d-block">{% for error in form.port_1.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                         </div>
+                         <div class="mb-3">
+                             {{ form.mode_1.label(class="form-label") }}
+                             {{ form.mode_1(class="form-select" + (' is-invalid' if form.mode_1.errors else ''), id="mode_1") }}
+                             {% if form.mode_1.errors %}<div class="invalid-feedback d-block">{% for error in form.mode_1.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                         </div>
+                         <div class="row mb-3 smpte-caller-options" id="caller-options-1" style="display: none;"> {# Class used by JS #}
+                             <div class="col-md-12"> {# Make address field full width #}
+                                 {{ form.target_address_1.label(class="form-label") }}
+                                 {{ form.target_address_1(class="form-control" + (' is-invalid' if form.target_address_1.errors else '')) }}
+                                 {% if form.target_address_1.errors %}<div class="invalid-feedback d-block">{% for error in form.target_address_1.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                             </div>
+                         </div>
+                    </fieldset>
+
+                    {# Leg 2 Section #}
+                    <fieldset class="smpte-leg-section mb-4">
+                         <legend class="fs-6 smpte-leg-header">Leg 2 Output</legend>
+                         <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.output_interface_2.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.output_interface_2.description }}"></i>
+                                {{ form.output_interface_2(class="form-select" + (' is-invalid' if form.output_interface_2.errors else '')) }}
+                                {% if form.output_interface_2.errors %}<div class="invalid-feedback d-block">{% for error in form.output_interface_2.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                             <div class="col-md-6">
+                                {{ form.port_2.label(class="form-label") }}
+                                <i class="fas fa-info-circle text-primary parameter-help" data-bs-toggle="tooltip" title="{{ form.port_2.description }}"></i>
+                                {{ form.port_2(class="form-control" + (' is-invalid' if form.port_2.errors else '')) }}
+                                {% if form.port_2.errors %}<div class="invalid-feedback d-block">{% for error in form.port_2.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                         </div>
+                          <div class="mb-3">
+                             {{ form.mode_2.label(class="form-label") }}
+                             {{ form.mode_2(class="form-select" + (' is-invalid' if form.mode_2.errors else ''), id="mode_2") }}
+                             {% if form.mode_2.errors %}<div class="invalid-feedback d-block">{% for error in form.mode_2.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                         </div>
+                         <div class="row mb-3 smpte-caller-options" id="caller-options-2" style="display: none;"> {# Class used by JS #}
+                             <div class="col-md-12"> {# Make address field full width #}
+                                 {{ form.target_address_2.label(class="form-label") }}
+                                 {{ form.target_address_2(class="form-control" + (' is-invalid' if form.target_address_2.errors else '')) }}
+                                 {% if form.target_address_2.errors %}<div class="invalid-feedback d-block">{% for error in form.target_address_2.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                             </div>
+                         </div>
+                    </fieldset>
+
+                    {# Submit/Cancel Buttons #}
+                    <div class="d-flex mt-4">
+                        <button type="submit" class="btn btn-info me-2"><i class="fas fa-play-circle"></i> Start SMPTE Pair</button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {# Footer #}
+        <footer class="mt-5 mb-3 text-center text-muted">
+            <hr>
+             <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank" rel="noopener noreferrer">BSD-2-Clause License</a>.</p>
+            <p class="small">Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html" target="_blank" rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.</p>
+        </footer>
+
+    </div>{# End Container #}
+
+    {# Link JavaScript #}
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/smpte2022_7.js') }}"></script>
+</body>
+</html>
+

@@ -145,7 +145,7 @@ class StreamForm(FlaskForm):
         },
     )
     rtp_encapsulation = BooleanField(
-        "RTP Encapsulation (SMPTE 2022-7)",
+        "RTP Encapsulation (non-synchronised)",
         default=False,
         render_kw={"class": "form-check-input"},
         description="Encapsulate UDP input into RTP (mtu=1316). Only for UDP/Multicast inputs.",
@@ -187,9 +187,15 @@ class StreamForm(FlaskForm):
                 encryption_valid = False
 
         rtp_valid = True
-        if self.rtp_encapsulation.data and input_type_value not in ["multicast", "colorbar_720p50", "colorbar_1080i25"]:
-             self.rtp_encapsulation.errors.append("RTP encapsulation only supported for Multicast or Colorbar inputs.")
-             rtp_valid = False
+        if self.rtp_encapsulation.data and input_type_value not in [
+            "multicast",
+            "colorbar_720p50",
+            "colorbar_1080i25",
+        ]:
+            self.rtp_encapsulation.errors.append(
+                "RTP encapsulation only supported for Multicast or Colorbar inputs."
+            )
+            rtp_valid = False
 
         return input_type_valid and encryption_valid and rtp_valid
 
@@ -334,8 +340,14 @@ class CallerForm(FlaskForm):
             target_valid = False
 
         rtp_valid = True
-        if self.rtp_encapsulation.data and input_type_value not in ["multicast", "colorbar_720p50", "colorbar_1080i25"]:
-            self.rtp_encapsulation.errors.append("RTP encapsulation only supported for Multicast or Colorbar inputs.")
+        if self.rtp_encapsulation.data and input_type_value not in [
+            "multicast",
+            "colorbar_720p50",
+            "colorbar_1080i25",
+        ]:
+            self.rtp_encapsulation.errors.append(
+                "RTP encapsulation only supported for Multicast or Colorbar inputs."
+            )
             rtp_valid = False
 
         return input_type_valid and encryption_valid and target_valid and rtp_valid

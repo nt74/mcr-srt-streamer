@@ -7,16 +7,18 @@ import logging
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s') # Example
 
 if __name__ == "__main__":
-    host = os.environ.get('HOST', '127.0.0.1')
-    port = int(os.environ.get('PORT', 5000))
-    threads = int(os.environ.get('THREADS', 4))
-    flask_env = os.environ.get('FLASK_ENV', 'production')
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", 5000))
+    threads = int(os.environ.get("THREADS", 4))
+    flask_env = os.environ.get("FLASK_ENV", "production")
 
     # Use Flask's logger or configure Waitress logger
-    logger = logging.getLogger('waitress')
+    logger = logging.getLogger("waitress")
     logger.setLevel(logging.INFO)
 
-    logger.info(f"Starting Waitress WSGI Server for SRT Streamer Enhanced ({flask_env} mode)")
+    logger.info(
+        f"Starting Waitress WSGI Server for SRT Streamer Enhanced ({flask_env} mode)"
+    )
     logger.info(f"Listening on http://{host}:{port}")
     logger.info(f"Using {threads} worker threads.")
 

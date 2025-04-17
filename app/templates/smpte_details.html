@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMPTE Pair {{ pair_id }} Details - MCR SRT Streamer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Optional: Add specific styles for this page */
+        .chart-container {
+            position: relative;
+            height: 200px; /* Adjust height as needed */
+            width: 100%;
+        }
+        .stats-table td:first-child {
+            width: 180px; /* Adjust label width */
+            font-weight: bold;
+            color: #6c757d; /* Muted color for labels */
+        }
+        .stats-table .stat-value {
+            font-weight: 500;
+        }
+        .leg-header {
+            border-bottom: 2px solid var(--bs-info);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            color: var(--bs-info);
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+             <div class="d-flex align-items-center">
+                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="height: 40px; margin-right: 15px;" onerror="this.style.display='none'">
+                 <h1><i class="fas fa-project-diagram"></i> SMPTE Pair Details: <span id="pair-id-display">{{ pair_id }}</span></h1>
+             </div>
+            <div>
+                <span id="refresh-indicator-details" class="text-muted small me-2 d-none"><i class="fas fa-sync fa-spin"></i> Refreshing...</span>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+                <button id="stop-pair-button" class="btn btn-danger"><i class="fas fa-stop-circle"></i> Stop Pair</button>
+                 <form id="stop-pair-form" method="POST" action="{{ url_for('smpte.stop_smpte_pair', pair_id_str=pair_id) }}" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                </form>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+        {% endfor %}{% endif %}{% endwith %}
+
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white"><i class="fas fa-cogs"></i> Configuration Summary</div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-3">Pair ID</dt><dd class="col-sm-9">{{ pair_id }}</dd>
+                    <dt class="col-sm-3">Input Type</dt><dd class="col-sm-9">{{ pair_config.get('input_type', 'N/A').replace('_',' ')|title }}</dd>
+                    {% if pair_config.get('input_type') == 'multicast' %}
+                        <dt class="col-sm-3">Multicast Source</dt><dd class="col-sm-9">{{ pair_config.get('multicast_address', '?') }}:{{ pair_config.get('multicast_port', '?') }} (Interface: {{ pair_config.get('multicast_interface') or 'Auto' }})</dd>
+                    {% elif pair_config.get('input_type', '').startswith('colorbar') %}
+                        <dt class="col-sm-3">Colorbar Type</dt><dd class="col-sm-9">{{ pair_config.get('colorbar_resolution', '?').upper() }}</dd>
+                    {% endif %}
+                    <dt class="col-sm-3">Shared SSRC</dt><dd class="col-sm-9"><code>{{ pair_config.get('ssrc', 'N/A') }}</code></dd>
+                    <dt class="col-sm-3">SRT Latency</dt><dd class="col-sm-9">{{ pair_config.get('latency', '?') }} ms</dd>
+                    <dt class="col-sm-3">SRT Overhead</dt><dd class="col-sm-9">{{ pair_config.get('overhead_bandwidth', '?') }}%</dd>
+                    <dt class="col-sm-3">Encryption</dt><dd class="col-sm-9">{{ pair_config.get('encryption', 'none').upper() }} {% if pair_config.get('encryption', 'none') != 'none' %}(Passphrase Set){% endif %}</dd>
+                    <dt class="col-sm-3">QoS</dt><dd class="col-sm-9">{{ 'Enabled' if pair_config.get('qos') else 'Disabled' }}</dd>
+                 </dl>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <h3 class="leg-header"><i class="fas fa-stream"></i> Leg 1 Statistics</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table table-sm stats-table">
+                            <tbody>
+                                <tr><td>Mode</td><td class="stat-value">{{ pair_config.get('mode_1', '?')|title }}</td></tr>
+                                <tr><td>Port</td><td class="stat-value">{{ pair_config.get('port_1', '?') }}</td></tr>
+                                {% if pair_config.get('mode_1') == 'caller' %}
+                                <tr><td>Target Host</td><td class="stat-value">{{ pair_config.get('target_address_1', '?') }}</td></tr>
+                                {% endif %}
+                                <tr><td>Interface</td><td class="stat-value">{{ pair_config.get('output_interface_1') or 'Auto' }}</td></tr>
+                                <tr><td>RTT</td><td class="stat-value"><span id="leg1-rtt">--</span> ms</td></tr>
+                                <tr><td>Packet Loss</td><td class="stat-value"><span id="leg1-pktLoss">--</span> %</td></tr>
+                                <tr><td>Send Rate</td><td class="stat-value"><span id="leg1-sendRate">--</span> Mbps</td></tr>
+                                <tr><td>Recv Rate</td><td class="stat-value"><span id="leg1-recvRate">--</span> Mbps</td></tr>
+                                <tr><td>Send Buffer</td><td class="stat-value"><span id="leg1-sndBuf">--</span> ms</td></tr>
+                                <tr><td>Recv Buffer</td><td class="stat-value"><span id="leg1-rcvBuf">--</span> ms</td></tr>
+                                <tr><td>Pkts Sent</td><td class="stat-value"><span id="leg1-pktSent">--</span></td></tr>
+                                <tr><td>Pkts Lost</td><td class="stat-value"><span id="leg1-pktLost">--</span></td></tr>
+                                <tr><td>Pkts Retrans</td><td class="stat-value"><span id="leg1-pktRetrans">--</span></td></tr>
+                            </tbody>
+                        </table>
+                        <hr>
+                        <div class="chart-container mb-3">
+                            <canvas id="leg1-rtt-chart"></canvas>
+                        </div>
+                         <div class="chart-container mb-3">
+                            <canvas id="leg1-loss-chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="leg1-rate-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                 <h3 class="leg-header"><i class="fas fa-stream"></i> Leg 2 Statistics</h3>
+                 <div class="card">
+                    <div class="card-body">
+                        <table class="table table-sm stats-table">
+                           <tbody>
+                                <tr><td>Mode</td><td class="stat-value">{{ pair_config.get('mode_2', '?')|title }}</td></tr>
+                                <tr><td>Port</td><td class="stat-value">{{ pair_config.get('port_2', '?') }}</td></tr>
+                                {% if pair_config.get('mode_2') == 'caller' %}
+                                <tr><td>Target Host</td><td class="stat-value">{{ pair_config.get('target_address_2', '?') }}</td></tr>
+                                {% endif %}
+                                <tr><td>Interface</td><td class="stat-value">{{ pair_config.get('output_interface_2') or 'Auto' }}</td></tr>
+                                <tr><td>RTT</td><td class="stat-value"><span id="leg2-rtt">--</span> ms</td></tr>
+                                <tr><td>Packet Loss</td><td class="stat-value"><span id="leg2-pktLoss">--</span> %</td></tr>
+                                <tr><td>Send Rate</td><td class="stat-value"><span id="leg2-sendRate">--</span> Mbps</td></tr>
+                                <tr><td>Recv Rate</td><td class="stat-value"><span id="leg2-recvRate">--</span> Mbps</td></tr>
+                                <tr><td>Send Buffer</td><td class="stat-value"><span id="leg2-sndBuf">--</span> ms</td></tr>
+                                <tr><td>Recv Buffer</td><td class="stat-value"><span id="leg2-rcvBuf">--</span> ms</td></tr>
+                                <tr><td>Pkts Sent</td><td class="stat-value"><span id="leg2-pktSent">--</span></td></tr>
+                                <tr><td>Pkts Lost</td><td class="stat-value"><span id="leg2-pktLost">--</span></td></tr>
+                                <tr><td>Pkts Retrans</td><td class="stat-value"><span id="leg2-pktRetrans">--</span></td></tr>
+                            </tbody>
+                        </table>
+                         <hr>
+                        <div class="chart-container mb-3">
+                            <canvas id="leg2-rtt-chart"></canvas>
+                        </div>
+                         <div class="chart-container mb-3">
+                            <canvas id="leg2-loss-chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="leg2-rate-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-5 mb-3 text-center text-muted">
+            <hr>
+            <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank" rel="noopener noreferrer">BSD-2-Clause License</a>.</p>
+            <p class="small">Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html" target="_blank" rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.</p>
+        </footer>
+
+    </div><script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
+    {# Include shared app.js if it contains tooltip init or other needed functions #}
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {# Include the NEW JS file for this page #}
+    <script src="{{ url_for('static', filename='js/smpte_details.js') }}"></script>
+</body>
+</html>
