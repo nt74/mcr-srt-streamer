@@ -271,55 +271,164 @@ deactivate
 
     Configure a server block (e.g., `/etc/nginx/conf.d/mcr-srt-streamer.conf`):
 
-    ```nginx
-    server {
-      listen 80;
-      server_name your-streamer-hostname.domain.com; # or IP
 
-      # Optional: Basic Auth for Web UI
-      location / {
-        # Uncomment if needed:
-        # auth_basic "Restricted Area";
-        # auth_basic_user_file /etc/nginx/.htpasswd;
+### NGINX Configuration (Standard Ports)
+
+The recommended NGINX configuration uses standard ports with:
+- Basic authentication for the web UI
+- No authentication for API endpoints
+- WebSocket support
+- Separate logging
+- SSL configuration for HTTPS
+
+```nginx
+# HTTP Server on port 80
+server {
+    listen 80;
+    server_name _;
+
+    access_log /var/log/nginx/srt-streamer-access.log;
+    error_log /var/log/nginx/srt-streamer-error.log;
+
+    location / {
+        # Basic Authentication for Web UI
+        auth_basic "Restricted Access";
+        auth_basic_user_file /etc/nginx/auth/htpasswd;
 
         proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 600s;
-        proxy_read_timeout 600s;
-        proxy_send_timeout 600s;
-      }
 
-      # API Location - NO Basic Auth (relies on X-API-Key)
-      location /api/ {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 600s;
-        proxy_read_timeout 600s;
-        proxy_send_timeout 600s;
-      }
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
 
-      location /static {
-        alias /opt/mcr-srt-streamer/app/static;
-        expires 7d;
-        add_header Cache-Control "public";
-      }
+        # Timeout settings
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
     }
-    ```
 
-    Create htpasswd (if using Basic Auth):
+    # API endpoints without authentication
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
-    ```bash
-    sudo htpasswd -c /etc/nginx/.htpasswd your_chosen_username
-    sudo chown nginx:nginx /etc/nginx/.htpasswd
-    sudo chmod 600 /etc/nginx/.htpasswd
-    sudo nginx -t && sudo systemctl reload nginx
-    ```
+    # SMPTE API endpoints without authentication
+    location /smpte2022_7/api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# HTTPS Server on port 443
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate /etc/nginx/ssl/srt-streamer.crt;
+    ssl_certificate_key /etc/nginx/ssl/srt-streamer.key;
+
+    # SSL settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    access_log /var/log/nginx/srt-streamer-ssl-access.log;
+    error_log /var/log/nginx/srt-streamer-ssl-error.log;
+
+    location / {
+        # Basic Authentication for Web UI
+        auth_basic "Restricted Access";
+        auth_basic_user_file /etc/nginx/auth/htpasswd;
+
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Timeout settings
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # API endpoints without authentication
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # SMPTE API endpoints without authentication
+    location /smpte2022_7/api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Redirect HTTP to HTTPS (optional)
+    # This is handled by the port 80 server in most cases
+}
+```
+
+### Setup Instructions:
+
+1. Create the auth directory and htpasswd file:
+```bash
+sudo mkdir -p /etc/nginx/auth
+sudo htpasswd -c /etc/nginx/auth/htpasswd username
+```
+
+2. Create SSL certificate directory and generate certificates (for HTTPS):
+```bash
+sudo mkdir -p /etc/nginx/ssl
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/srt-streamer.key \
+  -out /etc/nginx/ssl/srt-streamer.crt
+```
+
+3. For production use, consider using Let's Encrypt certificates instead:
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com
+```
+
+4. Test configuration and reload NGINX:
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Key features of this configuration:
+- Standard ports: 80 (HTTP) and 443 (HTTPS)
+- Basic auth for web UI but not for API endpoints
+- WebSocket support for real-time updates
+- Separate logging for HTTP and HTTPS
+- Modern SSL/TLS configuration
+- Optional HTTP to HTTPS redirect (recommended for production)
+
 
 -   **Systemd Services**
 
