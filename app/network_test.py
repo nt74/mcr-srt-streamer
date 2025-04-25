@@ -1,5 +1,4 @@
 # app/network_test.py
-# Uses tuple (result, error_message) return pattern for internal functions.
 
 import os
 import json
@@ -10,12 +9,10 @@ import time
 from datetime import datetime, timedelta
 import logging
 import re
-from typing import Tuple, Dict, Any, Optional, List, Union  # Added type hinting
+from typing import Tuple, Dict, Any, Optional, List, Union
 
 # If get_external_ip_and_location is defined elsewhere or still returns dict, adjust import/handling
-from app.utils import (
-    get_external_ip_and_location,
-)  # This function should now return a tuple
+from app.utils import get_external_ip_and_location
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +42,7 @@ IPERF_MANUAL_UDP_DURATION = 5
 IPERF_MANUAL_UDP_BITRATE = "10M"
 IPERF_MANUAL_TCP_DURATION = 7
 IPERF_PACKET_LENGTH = 1200
-IPERF_SUBPROCESS_TIMEOUT = 15  # Reduced timeout
+IPERF_SUBPROCESS_TIMEOUT = 15
 ASSUMED_LOSS_FOR_TCP_FALLBACK = 7.0  # Loss % used when only ping/TCP works
 
 os.makedirs(DATA_DIR, exist_ok=True)

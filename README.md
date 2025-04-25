@@ -4,7 +4,7 @@
 
 `mcr-srt-streamer` is a tool for testing SRT (Secure Reliable Transport) listeners and callers, optimized for professional broadcast workflows (e.g., DVB transport streams). Built with Python, Flask, GStreamer, and Bootstrap 5 (with SVT color theme), it provides a web interface to manage and monitor multiple SRT streams originating from local Transport Stream (`.ts`) files, UDP multicast inputs, internally generated test patterns, or SMPTE 2022-7 redundant streams.
 
-The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! ... ! srtsink`) for robust TS-over-SRT streaming and includes integrated network testing tools (`ping`, optionally `iperf3`) to recommend optimal SRT parameters (Latency, Overhead) derived from the Haivision SRT Deployment Guide[cite: 679]. Recent refactoring has centralized configuration logic, standardized internal error reporting (using tuples), and separated frontend JavaScript into external files for improved maintainability and robustness. The interface is implemented with Bootstrap 5, jQuery, and Chart.js, designed for air-gapped or firewall-restricted operation with no external CDN dependencies.
+The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! ... ! srtsink`) for robust TS-over-SRT streaming and includes integrated network testing tools (`ping`, optionally `iperf3`) to recommend optimal SRT parameters (Latency, Overhead) derived from the Haivision SRT Deployment Guide. Recent improvements include fixes for SMPTE 2022-7 caller mode statistics and source binding, enhanced dashboard statistics display, improved form validation, and making passphrase fields visible for easier use. The interface is implemented with Bootstrap 5, jQuery, and Chart.js, designed for air-gapped or firewall-restricted operation with no external CDN dependencies.
 
 ---
 
@@ -16,62 +16,49 @@ The application configures GStreamer pipelines (`filesrc/udpsrc/videotestsrc ! .
 -   **Listener and Caller Modes:** Launch streams as SRT Listener (server) or Caller (client) with easy web configuration.
 -   **Multiple Input Sources:**
     -   **File:** Stream local `.ts` files from the `media/` directory.
-    -   **UDP Multicast:** Ingest streams from IPTV multicast sources declared in `app/data/iptv_channels.json`[cite: 1], with selectable network interface (`Auto` chooses OS default).
+    -   **UDP Multicast:** Ingest streams from IPTV multicast sources declared in `app/data/iptv_channels.json`, with selectable network interface (`Auto` chooses OS default).
     -   **Colorbar Generator:** Stream internally generated 720p50 or 1080i25 PAL color bars (SMPTE pattern) with a 1000Hz sine audio tone, suitable for testing SRT links without an external source.
 -   **SMPTE 2022-7 Seamless Protection Output:** Create redundant RTP streams sent via SRT with identical SSRC and timestamps for seamless protection (see dedicated section below for details).
 -   **GStreamer Pipeline Details:**
-    -   Inputs from local files or multicast via `filesrc` or `udpsrc`. For Colorbars, `videotestsrc` and `audiotestsrc` are used, outputting to an internal UDP multicast relay[cite: 3].
+    -   Inputs from local files or multicast via `filesrc` or `udpsrc`. For Colorbars, `videotestsrc` and `audiotestsrc` are used, outputting to an internal UDP multicast relay.
     -   Transport Stream parsing via `tsparse` (for file/multicast/colorbar inputs before SRT sink) with:
         -   timestamps enabled (`set-timestamps=true`)
         -   DVB alignment (`alignment=7`)
         -   configurable smoothing latency (to reduce PCR jitter, mainly for file/multicast)
-    -   **Colorbar Generation:** Uses `videotestsrc` (pattern smpte-rp-219) and `audiotestsrc` (sine wave 1000Hz) for test signals. Audio is encoded to AAC, prioritizing `fdkaacenc` if available on the system, otherwise falling back to `voaacenc`. Video is encoded using `x264enc`. The generated streams are multiplexed into an MPEG-TS stream before being sent via SRT (using an internal UDP multicast relay for better compatibility)[cite: 3].
+    -   **Colorbar Generation:** Uses `videotestsrc` (pattern smpte-rp-219) and `audiotestsrc` (sine wave 1000Hz) for test signals. Audio is encoded to AAC, prioritizing `fdkaacenc` if available on the system, otherwise falling back to `voaacenc`. Video is encoded using `x264enc`. The generated streams are multiplexed into an MPEG-TS stream before being sent via SRT (using an internal UDP multicast relay).
     -   SRT transmission via `srtsink` with:
-        -   adjustable latency (20-8000ms, accepts any integer)
+        -   adjustable latency (20-8000ms)
         -   bandwidth overhead (1-99%)
-        -   optional encryption: AES-128 or AES-256 (10-79 character passphrase)
-        -   **Hardcoded DVB-Optimized Parameters:** Includes `tlpktdrop=true` and conservative buffer sizes (`rcvbuf`/`sndbuf`/`fc` defaulting to 8MB/8192pkts) applied directly in the URI builder for stability (see `app/stream_manager.py`).
+        -   optional encryption: AES-128 or AES-256 (10-80 character **visible** passphrase field)
+        -   **Hardcoded DVB-Optimized Parameters:** Includes `tlpktdrop=true` and conservative buffer sizes (`rcvbuf`/`sndbuf`/`fc` defaulting to 8MB/4096pkts) applied directly in the URI builder.
         -   quality-of-service DSCP flag (`qos=true|false`)
-        -   **Optional RTP Encapsulation:** Apply `rtpmp2tpay pt=33 mtu=1316` for UDP/Colorbar inputs, useful for SMPTE 2022-7 testing (selectable in UI/API).
--   **Refactored Logic:** Centralized configuration validation (`_build_stream_config_from_dict`) shared between Web UI and API routes for consistency.
--   **Detailed DVB Compliance:** Pipeline settings and parameters fine-tuned for broadcast/DVB workflows[cite: 4].
+        -   **Optional RTP Encapsulation:** Apply `rtpmp2tpay pt=33 mtu=1316` for UDP/Colorbar inputs, useful for SMPTE 2022-7 testing (selectable in UI/API). Standard SMPTE 2022-7 streams always use RTP encapsulation.
+-   **Refactored Logic:** Centralized configuration validation shared between Web UI and API routes. Robust statistics parsing handles both Listener and Caller modes correctly.
+-   **Detailed DVB Compliance:** Pipeline settings (`tsparse alignment=7`, `rtpmp2tpay mtu=1316`) aimed at broadcast/DVB workflows.
 
 ### Network Testing & Recommendations
 
--   **Configurable Network Test Mechanisms:**
-    Controlled via environment variable `NETWORK_TEST_MECHANISM`, defaulting to `ping_only`.
-    -   **`ping_only` mode (default):**
-        -   Uses a list of global and regional iperf3 servers (`app/data/iperf3_export_servers.json`), but performs only ICMP `ping` to assess RTT[cite: 5].
-        -   Estimates packet loss for recommendations with a fixed fallback loss rate (`ASSUMED_LOSS_FOR_TCP_FALLBACK`, default 7%)[cite: 5].
-        -   Provides latency and overhead suggestions based on Haivision Guide formulas using RTT + fixed loss[cite: 5].
-        -   Useful in firewall-restricted environments where UDP tests are blocked or `iperf3` is not available.
-    -   **`iperf` mode:**
-        -   Requires optional iperf3 binary and configuration of a background server checking service (details below).
-        -   Prioritizes a pre-filtered safe list of UDP-capable servers (`app/data/udp_safe_servers.json`), generated by running `test_iperf_servers.py` regularly via systemd timer[cite: 5, 6].
-        -   Performs `ping` + UDP `iperf3` tests to directly measure RTT, bandwidth, loss, jitter[cite: 5].
-        -   Provides more accurate SRT recommendations derived from measured stats[cite: 5].
-        -   Suitable when UDP tests to internet servers are feasible.
-    -   **In Both Modes:**
-        -   GeoIP is used to choose closer servers[cite: 5].
-        -   Tests available: Closest, Regional, or Manual (user supplies server)[cite: 5].
-        -   Results auto-fill form fields with suggested latency & overhead for starting new streams[cite: 5].
--   **System Info Dashboard:** Host stats including CPU, RAM, disk, IP, uptime, user[cite: 7].
+-   **Configurable Network Test Mechanisms:** Controlled via `NETWORK_TEST_MECHANISM` env var (`ping_only` or `iperf`).
+    -   **`ping_only` mode (default):** Uses ICMP `ping` to assess RTT. Estimates loss for recommendations. Useful in restricted environments.
+    -   **`iperf` mode:** Requires `iperf3` binary and optional background server check service. Performs `ping` + UDP `iperf3` tests for measured RTT, bandwidth, loss, jitter. Provides more accurate recommendations.
+    -   **In Both Modes:** GeoIP used for server selection. Tests: Closest, Regional, Manual. Results auto-fill Latency/Overhead fields.
+-   **System Info Dashboard:** Host stats (CPU, RAM, disk, IP, uptime, user).
 -   **Stream Status:** Live updates with:
-    -   Real-time charts for bitrate, RTT, loss (on detail page)[cite: 8].
-    -   SRT packet statistics, counters, and **Negotiated Latency** (on detail page)[cite: 8].
-    -   Per-stream details page with advanced debug data (client IPs, connection state)[cite: 8, 9].
+    -   **Improved Dashboard Display:** Key stats (Bitrate, RTT, Loss) shown directly on dashboard cards for active streams (when status is "Running" or "Connected"). Consistent color coding for status indicators (Green/Checkmark for Running/Connected).
+    -   Real-time charts for bitrate, RTT, loss (on detail page).
+    -   SRT packet statistics, counters, and **Negotiated Latency** (on detail page).
+    -   Per-stream details page with advanced debug data (client IPs, connection state, raw stats string).
 -   **Media Browser & Info:**
-    -   AJAX modal file selector for `.ts` media in `media/`[cite: 9].
-    -   File analysis via `mediainfo` (requires `mediainfo` binary)[cite: 9, 10].
+    -   AJAX modal file selector for `.ts` media in `media/`.
+    -   File analysis via `mediainfo` (requires `mediainfo` binary).
 -   **Security:**
-    -   NGINX frontend with optional Basic Auth[cite: 11].
-    -   CSRF protection via Flask-WTF[cite: 11].
-    -   Requires strong `SECRET_KEY` (env var)[cite: 11].
-    -   **REST API Authentication** via `X-API-Key` header (env var `API_KEY`).
+    -   NGINX frontend with optional Basic Auth.
+    -   CSRF protection via Flask-WTF.
+    -   Requires strong `SECRET_KEY` (env var).
+    -   REST API Authentication via `X-API-Key` header (env var `API_KEY`).
 -   **Designed for Air-Gapped Deployments:**
-    -   **No** external CDNs or resources needed.
-    -   All Bootstrap, jQuery, Chart.js & Font Awesome assets are local[cite: 12, 13, 14].
-    -   JavaScript separated into external files (`app/static/js/`) for better maintainability.
+    -   No external CDNs. All Bootstrap, jQuery, Chart.js & Font Awesome assets are local.
+    -   JavaScript separated into external files.
 
 ---
 
@@ -81,52 +68,48 @@ This feature adds support for creating SMPTE 2022-7 style redundant RTP streams 
 
 ### Design Approach
 
-To avoid disrupting existing functionality, this feature was implemented separately from the standard Listener/Caller stream management:
+This feature is implemented separately from the standard Listener/Caller stream management:
 
-- **Separate Management:** A new class `SMPTEManager` (`app/smpte_manager.py`) handles the lifecycle of SMPTE pair GStreamer pipelines.
-- **Separate UI:** A dedicated configuration page (`/smpte2022_7`) allows users to set up SMPTE pairs.
-- **Separate Routes:** A new Flask Blueprint (`smpte_bp` in `app/smpte_routes.py`) handles the UI routes and dedicated API endpoints for SMPTE pairs.
+- **Separate Management:** `SMPTEManager` class (`app/smpte_manager.py`) handles SMPTE pair GStreamer pipelines.
+- **Separate UI:** Dedicated configuration page (`/smpte2022_7`) and details page (`/smpte2022_7/<id>`).
+- **Separate Routes:** Flask Blueprint (`smpte_bp` in `app/smpte_routes.py`) handles UI and dedicated API endpoints.
 
 ### New Components
 
 **Backend:**
-- `app/smpte_manager.py`: Contains `SMPTEManager` class to build `(udpsrc -> tsparse -> rtpmp2tpay -> tee -> 2x srtsink)` and manage pipelines. Includes methods for getting statistics and debug info for pairs.
-- `app/smpte_routes.py`: Defines routes for the config page (`/`), stopping pairs (`/stop/<id>`), the details page (`/<id>`), and API endpoints (`/api/stats/<id>`, `/api/debug/<id>`).
-- `app/smpte_forms.py`: Defines `SMPTEPairForm` for web UI configuration, including validation requiring specific NIC selection when multiple interfaces are available. Includes shared parameters (SSRC, SRT Latency, Overhead, Smoothing, Encryption) and per-leg settings (Interface, Port, Mode, Target Address).
+- `app/smpte_manager.py`: Contains `SMPTEManager` class to build `(input -> tsparse -> rtpmp2tpay -> tee -> 2x srtsink)` and manage pipelines. Includes methods for getting statistics and debug info, correctly parsing stats for both listener and caller modes (returning zeros for unconnected legs).
+- `app/smpte_routes.py`: Defines routes for the config page (`/`), stopping pairs (`/stop/<id>`), the details page (`/<id>`), and API endpoints (`/api/pairs`, `/api/pairs/<id>`, `/api/stats/<id>`, `/api/debug/<id>`).
+- `app/smpte_forms.py`: Defines `SMPTEPairForm` for web UI configuration. Includes **validation preventing the use of the same Port and selected Interface combination for both legs**. Passphrase input uses a standard text field for visibility.
 
 **Frontend:**
 - `app/templates/smpte2022_7.html`: Web form for configuring a new SMPTE pair.
 - `app/templates/smpte_details.html`: Page to display detailed statistics (tables and charts) for both legs of an active SMPTE pair.
-- `app/static/js/smpte2022_7.js`: JavaScript for the configuration page (e.g., toggling conditional fields).
+- `app/static/js/smpte2022_7.js`: JavaScript for the configuration page.
 - `app/static/js/smpte_details.js`: JavaScript for the details page; fetches stats from the API (`/smpte2022_7/api/stats/<id>`) periodically and updates tables and charts for both legs.
 
 ### Modifications to Existing Files
 
-- `app/__init__.py`: Initialized `SMPTEManager` alongside `StreamManager` and registered the new `smpte_bp` Blueprint.
-- `app/routes.py`:
-  - Modified the `/ui/active_streams_data` endpoint to query both `StreamManager` and `SMPTEManager` and return a combined list/dictionary of all active streams and pairs (differentiated by a `stream_type` field).
-  - Modified the index route to fetch initial data directly from both managers to avoid log warnings.
-- `app/static/js/dashboard.js`: Updated the `updateActiveStreams` function to handle the combined data from the API, render distinct cards for standard streams and SMPTE pairs, and include correct links ("Details", "Debug", "Stop") for each type.
-- `app/stream_manager.py`: Re-added smoothing-latency parameter to tsparse for colorbar consumer pipelines to potentially improve receiver compatibility. Corrected minor indentation issue in shutdown.
-- `app/utils.py`: Increased timeout for the external GeoIP lookup function to reduce warnings (though the root cause might be network related).
+- `app/__init__.py`: Initialized `SMPTEManager` and registered the `smpte_bp` Blueprint.
+- `app/routes.py`: Modified `/ui/active_streams_data` to query both managers and return combined data. Modified index route to fetch initial data from both managers.
+- `app/static/js/dashboard.js`: Updated to handle combined data, render distinct cards, include correct links, and display stats/status correctly for standard streams.
+- `app/stream_manager.py`: Updated `get_active_streams` to fetch dashboard stats for "Running" status. Cleaned up debug logging in `get_debug_info`. Updated stats parsing.
+- `app/forms.py`: Changed `passphrase` field from `PasswordField` to `StringField`.
 
 ### Key Functionality Details
 
-- **Pipeline:** The core SMPTE pipeline takes the input, parses it (tsparse with smoothing), encapsulates it into RTP with a user-defined SSRC (rtpmp2tpay), splits it (tee), and sends each identical RTP stream to a separate srtsink.
-- **Configuration:** The UI allows configuration of input source, shared SRT/RTP parameters, and per-leg SRT settings (Mode, Port, Interface, Target Address). The main Port field is used for both Listener port binding and Caller target port.
-- **API:** Dedicated API endpoints under `/smpte2022_7/api/` provide statistics and detailed debug information (including raw stats) for active pairs.
-- **UI Integration:** SMPTE pairs are displayed on the main dashboard and have their own details page accessible via a "Details" link.
+- **Pipeline:** `(input -> tsparse -> rtpmp2tpay -> tee -> 2x srtsink)`. Includes `tsparse` with `alignment=7` and configurable `smoothing-latency`. `rtpmp2tpay` uses `pt=33`, `mtu=1316`, and the configured SSRC.
+- **Configuration:** UI allows configuration of input, shared SRT/RTP params, and per-leg SRT settings (Mode, Port, Interface, Target Address).
+- **Caller Mode Binding:** Uses `localaddress=IP` parameter in SRT URI for source IP binding when a specific interface is selected. The OS assigns the source port (localport is not forced).
+- **API:** Dedicated API endpoints under `/smpte2022_7/api/`.
+- **UI Integration:** SMPTE pairs shown on dashboard, have own details page.
 
 ---
 
 ## Technology Stack
 
--   **Backend:** Python 3 with Flask microframework, Flask-WTF, Waitress WSGI, GStreamer via PyGObject, requests, psutil[cite: 15, 16].
--   **Frontend:** Bootstrap 5, jQuery, Chart.js, Font Awesome (all local assets), Jinja2 templates, custom SVT-inspired styles[cite: 12, 13, 14, 17].
--   **Supporting Tools:**
-    `curl`, `ping` (iputils), `dig` (bind-utils/dnsutils), `ffmpeg` (for ffprobe), `mediainfo`,
-    **optionally**: `iperf3` (if using full UDP network tests),
-    `systemd`, and `nginx` (for serving/proxying + optional auth)[cite: 15].
+-   **Backend:** Python 3 with Flask, Flask-WTF, Waitress WSGI, GStreamer via PyGObject, requests, psutil.
+-   **Frontend:** Bootstrap 5, jQuery, Chart.js, Font Awesome (all local), Jinja2 templates, custom styles.
+-   **Supporting Tools:** `curl`, `ping`, `dig`, `ffmpeg`, `mediainfo`, **optionally**: `iperf3`, `systemd`, `nginx`.
 
 ---
 
@@ -134,37 +117,37 @@ To avoid disrupting existing functionality, this feature was implemented separat
 
 ### Backend (`app/` directory)
 
--   `stream_manager.py`: Controls creation, monitoring, and termination of GStreamer pipelines (including internal colorbar generators). Now hardcodes buffer/tlpktdrop params and returns `(success, message)` tuples[cite: 3].
--   `smpte_manager.py`: Manages SMPTE 2022-7 redundant stream pairs with identical RTP streams.
--   `network_test.py`: Manages ping/iperf3 tests based on configured mode. Returns `(result, error)` tuples[cite: 5].
--   `test_iperf_servers.py`: Background script to refresh/validate list of public iperf3 UDP servers[cite: 6].
--   `utils.py`: Gathers system info, network interfaces, GeoIP functions. Uses `(result, error)` tuples for some functions[cite: 7].
--   `forms.py`: WTForms for user inputs[cite: 2].
+-   `stream_manager.py`: Manages standard SRT streams (listener/caller) and colorbar generators.
+-   `smpte_manager.py`: Manages SMPTE 2022-7 redundant stream pairs.
+-   `network_test.py`: Manages ping/iperf3 tests.
+-   `test_iperf_servers.py`: Background script for iperf server validation.
+-   `utils.py`: System info, network interfaces, GeoIP functions.
+-   `forms.py`: WTForms for standard streams.
 -   `smpte_forms.py`: WTForms for SMPTE 2022-7 configuration.
--   `routes.py`: Flask routes for web UI. Includes `/ui/...` endpoints for AJAX[cite: 1].
--   **`api_routes.py`**: Flask Blueprint routes for the REST API[cite: 18].
--   **`smpte_routes.py`**: Flask Blueprint routes for SMPTE 2022-7 functionality.
--   `ts_analyzer.py`: *(Currently placeholder/unused)*
+-   `routes.py`: Flask routes for main web UI and standard stream AJAX/debug endpoints.
+-   `api_routes.py`: Flask Blueprint routes for the REST API (standard streams).
+-   `smpte_routes.py`: Flask Blueprint routes for SMPTE 2022-7 UI and API.
+-   `auth.py`: Authentication helpers (API Key / Basic Auth potentially).
+-   `ts_analyzer.py`: *(Placeholder/unused)*
 -   `data/`: Config files (`iptv_channels.json`), server lists, caches.
 -   `static/`: Local CSS, JS (including `app.js`, `forms.js`, `dashboard.js`, `caller.js`, `stream_details.js`, `network_test.js`, `smpte2022_7.js`, `smpte_details.js`), fonts, images.
 -   `templates/`: HTML templates (`index.html`, `caller.html`, `stream_details.html`, `network_test.html`, `media_info.html`, `smpte2022_7.html`, `smpte_details.html`).
 
-**Logs**: `/var/log/srt-streamer/srt_streamer.log` (default) [cite: 11]
-**Data:** `app/data/` (channel lists, iperf lists, GeoIP results caches, UDP safe servers list etc.) [cite: 11, 1, 19, 20]
+**Logs**: `/var/log/srt-streamer/srt_streamer.log` (default)
+**Data:** `app/data/`
 
 ### Frontend (via recommended NGINX proxy)
 
--   Serves static assets from `/opt/mcr-srt-streamer/app/static/`[cite: 11].
--   Protects with optional Basic Auth (`.htpasswd`)[cite: 11].
--   Reverse proxies to Python Waitress server (default port 5000)[cite: 11].
--   API endpoints (`/api/`) can be configured without Basic Auth when using API keys.
+-   Serves static assets from `/opt/mcr-srt-streamer/app/static/`.
+-   Protects with optional Basic Auth.
+-   Reverse proxies to Python Waitress server (default port 5000).
+-   API endpoints (`/api/`, `/smpte2022_7/api/`) can be configured without Basic Auth when using API keys.
 
 ### System Services (default install)
 
--   **`network-tuning.service`**: Runs sysctl script (`network-tuning.sh`) to adjust OS network settings (optional but recommended)[cite: 11, 21].
--   **`mcr-srt-streamer.service`**: Runs the Waitress Flask server, with configurable env vars (`SECRET_KEY`, `NETWORK_TEST_MECHANISM`, `API_KEY`, etc)[cite: 11].
--   **`iperf-server-check.service` & `.timer`**:
-    *optional* background timer to periodically (e.g., nightly) run the UDP server check to update good iperf3 server list. Only needed with `NETWORK_TEST_MECHANISM=iperf`[cite: 11].
+-   **`network-tuning.service`**: Optional OS network tuning.
+-   **`mcr-srt-streamer.service`**: Runs the Waitress Flask server.
+-   **`iperf-server-check.service` & `.timer`**: Optional background UDP server check for `iperf` mode.
 
 ---
 
@@ -182,7 +165,7 @@ To avoid disrupting existing functionality, this feature was implemented separat
     Sufficient stable bandwidth plus overhead (> stream bitrate × (1 + overhead%)). Network tuning is recommended.
 -   **Dependencies:**
     -   Python 3 + pip & venv
-    -   GStreamer 1.0 with good, bad, ugly, libav, gst-python bindings (ensure plugins for H.264 (`x264enc`) and AAC (`fdkaacenc`, `voaacenc`) encoding are available)[cite: 16].
+    -   GStreamer 1.0 with good, bad, ugly, libav, gst-python bindings (ensure plugins for H.264 (`x264enc`) and AAC (`fdkaacenc`, `voaacenc`) encoding are available).
     -   `ping` (iputils), `curl`, `dig` (dnsutils/bind-utils), `mediainfo`, and `ffmpeg`
     -   **Optional:** `iperf3` (only if full UDP tests needed)
 
@@ -251,7 +234,7 @@ deactivate
     # Copy your .ts files inside
     ```
 
--   **Multicast Channels JSON (`app/data/iptv_channels.json`):** [cite: 1]
+-   **Multicast Channels JSON (`app/data/iptv_channels.json`):**
 
     ```json
     [
@@ -698,11 +681,17 @@ curl -X POST \
 
 ---
 
+## SMPTE 2022-7 Pairs API (`/smpte2022_7/api/...`)
+
+(Review and update API examples/descriptions, ensuring `localport` is not shown as a required input for caller mode, and stats responses are accurate)
+
+---
+
 ## Configuration & Network Tuning Tips
 
 -   **SRT Latency & Overhead:**
-    -   Increased latency buffers for jitter and recovery; typical recommendation = 4×RTT or more, plus safety margin[cite: 381, 382].
-    -   Overhead % covers recovery bandwidth; Haivision suggests >25-30% in lossy environments[cite: 364, 365].
+    -   Increased latency buffers for jitter and recovery; typical recommendation = 4×RTT or more, plus safety margin.
+    -   Overhead % covers recovery bandwidth; Haivision suggests >25-30% in lossy environments.
 -   **TSParse smoothing latency:**
     -   PCR smoothing (for file/multicast inputs): try 20-50ms. Not applicable to Colorbar source.
 -   **QoS (DSCP):**
@@ -712,10 +701,12 @@ curl -X POST \
 -   **SMPTE 2022-7 Configuration:**
     -   Use identical SRT parameters for both legs except for network interfaces/targets
     -   Ensure sufficient network bandwidth for redundant streams
+    -   Ensure destination ports are different if mirroring `localport` (though this is no longer default)
+    -   Ensure unique Port+Interface combination if selecting specific interfaces for both legs
 -   **Choose test mode carefully:**
     -   Use `iperf` mode and background job if internet UDP allowed and accurate tuning critical.
     -   Use `ping_only` in secure or restricted environments.
--   **Adjust Linux sysctl via `network-tuning.sh`:** [cite: 21]
+-   **Adjust Linux sysctl via `network-tuning.sh`:**
     -   Increase socket buffers, tune net.filter parameters, etc.
 
 ---
@@ -733,6 +724,4 @@ MCR SRT Streamer is released under the <a href="https://opensource.org/licenses/
 -   [SRT GitHub](https://github.com/Haivision/srt)
 -   [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
 -   [SMPTE 2022-7 Standard](https://www.smpte.org/)
-
----
 

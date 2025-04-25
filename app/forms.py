@@ -5,10 +5,9 @@ from wtforms import (
     StringField,
     IntegerField,
     SelectField,
-    RadioField,  # Kept for NetworkTestForm
-    PasswordField,  # Kept in case used elsewhere
+    RadioField,  # For NetworkTestForm
     BooleanField,
-    FileField,  # Kept for MediaUploadForm
+    FileField,  # For MediaUploadForm
 )
 from wtforms.validators import (
     DataRequired,
@@ -16,12 +15,12 @@ from wtforms.validators import (
     NumberRange,
     Optional,
     ValidationError,
-    InputRequired,  # Needed for conditional validation
+    InputRequired,  # For conditional validation
 )
 from wtforms.widgets import html_params, Input
 from markupsafe import Markup
 from flask_wtf.file import FileAllowed
-import re  # Import re for validation if needed
+import re
 
 
 # --- Custom Widget for Percentage Input ---
@@ -138,14 +137,14 @@ class StreamForm(FlaskForm):
     )
     passphrase = StringField(
         "Passphrase",
-        validators=[Optional(), Length(min=10, max=79)],
+        validators=[Optional(), Length(min=10, max=80)],
         render_kw={
-            "placeholder": "Required if encryption enabled (10-79 chars)",
+            "placeholder": "Required if encryption enabled (10-80 chars)",
             "class": "form-control",
         },
     )
     rtp_encapsulation = BooleanField(
-        "RTP Encapsulation (non-synchronised)",
+        "RTP Encapsulation",
         default=False,
         render_kw={"class": "form-check-input"},
         description="Encapsulate UDP input into RTP (mtu=1316). Only for UDP/Multicast inputs.",
@@ -154,7 +153,7 @@ class StreamForm(FlaskForm):
         "Enable QoS",
         default=False,
         render_kw={"class": "form-check-input"},
-        description="Enable Quality of Service flag (qos=true) for SRT URI",
+        description="Adjusts the pipeline if processing falls behind (e.g., from heavy CPU use), keeping your stream in sync by managing data flow.",
     )
 
     def validate(self, extra_validators=None):
@@ -182,8 +181,8 @@ class StreamForm(FlaskForm):
             if not self.passphrase.data:
                 self.passphrase.errors.append("Passphrase is required.")
                 encryption_valid = False
-            elif not (10 <= len(self.passphrase.data) <= 79):
-                self.passphrase.errors.append("Passphrase must be 10-79 characters.")
+            elif not (10 <= len(self.passphrase.data) <= 80):
+                self.passphrase.errors.append("Passphrase must be 10-80 characters.")
                 encryption_valid = False
 
         rtp_valid = True
@@ -286,14 +285,14 @@ class CallerForm(FlaskForm):
     )
     passphrase = StringField(
         "Passphrase",
-        validators=[Optional(), Length(min=10, max=79)],
+        validators=[Optional(), Length(min=10, max=80)],
         render_kw={
-            "placeholder": "Required if encryption enabled (10-79 chars)",
+            "placeholder": "Required if encryption enabled (10-80 chars)",
             "class": "form-control",
         },
     )
     rtp_encapsulation = BooleanField(
-        "RTP Encapsulation (SMPTE 2022-7)",
+        "RTP Encapsulation",
         default=False,
         render_kw={"class": "form-check-input"},
         description="Encapsulate UDP input into RTP (mtu=1316). Only for UDP/Multicast inputs.",
@@ -302,7 +301,7 @@ class CallerForm(FlaskForm):
         "Enable QoS",
         default=False,
         render_kw={"class": "form-check-input"},
-        description="Enable Quality of Service flag (qos=true) for SRT URI",
+        description="Adjusts the pipeline if processing falls behind (e.g., from heavy CPU use), keeping your stream in sync by managing data flow.",
     )
 
     def validate(self, extra_validators=None):
@@ -330,8 +329,8 @@ class CallerForm(FlaskForm):
             if not self.passphrase.data:
                 self.passphrase.errors.append("Passphrase is required.")
                 encryption_valid = False
-            elif not (10 <= len(self.passphrase.data) <= 79):
-                self.passphrase.errors.append("Passphrase must be 10-79 characters.")
+            elif not (10 <= len(self.passphrase.data) <= 80):
+                self.passphrase.errors.append("Passphrase must be 10-80 characters.")
                 encryption_valid = False
 
         target_valid = True

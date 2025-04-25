@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Debug Info - Stream {{ stream_key }} - MCR SRT Streamer</title>
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='css/all.min.css') }}">
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='css/style.css') }}">
+        <style>
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            font-size: 0.85rem;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="container mt-4">
+            {# Header Section - Copied from index.html for consistency #}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}"
+                         alt="SVT Logo"
+                         style="height: 40px;
+                                margin-right: 15px">
+                    <h1>
+                        <i class="fas fa-bug"></i> Debug Info: Stream {{ stream_key }}
+                    </h1>
+                </div>
+                <div>
+                    <a href="{{ url_for("index") }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+                </div>
+            </div>
+            {# Flash Messages (Optional but good practice) #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="alert"
+                                    aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            {# Debug Data Display #}
+            <div class="card">
+                <div class="card-header bg-dark text-white">Raw Debug Data</div>
+                <div class="card-body">
+                    {# Use the 'tojson' filter with indentation for pretty printing #}
+                    <pre><code>{{ debug_data | tojson(indent=2) }}</code></pre>
+                </div>
+            </div>
+            {# Raw Stats String Display (Optional) #}
+            {% if debug_data.get('stats') and debug_data.stats.get('_raw_stats_string') %}
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">Raw SRT Stats String (from GStreamer)</div>
+                    <div class="card-body">
+                        <pre><code>{{ debug_data.stats._raw_stats_string }}</code></pre>
+                    </div>
+                </div>
+            {% endif %}
+            {# Footer Section - Copied from index.html for consistency #}
+            <footer class="mt-5 mb-3 text-center text-muted">
+                <hr>
+                <p>
+                    &copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause"
+    target="_blank"
+    rel="noopener noreferrer">BSD-2-Clause License</a>.
+                </p>
+                <p class="small">
+                    Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html"
+    target="_blank"
+    rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.
+                </p>
+            </footer>
+        </div>
+        {# End Container #}
+        {# --- JAVASCRIPT LINKS --- #}
+        <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+        {# Shared Helpers if needed #}
+        <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    </body>
+</html>

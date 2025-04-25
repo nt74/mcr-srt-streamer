@@ -10,8 +10,20 @@ from flask import (
     flash,
     current_app as app,  # Use current_app for accessing managers
     session,
+    Blueprint,
 )
-from app.forms import (
+
+import json
+import logging
+import os
+import re
+import time
+import subprocess
+from datetime import datetime, timedelta
+from typing import Tuple, Dict, Any, Optional, List, Union
+import socket
+
+from app.forms import (  # Import required forms
     StreamForm,
     CallerForm,
     NetworkTestForm,
@@ -24,18 +36,10 @@ from app.utils import (
     get_external_ip_and_location,
 )
 from app.network_test import NetworkTester, NETWORK_TEST_MECHANISM
-import os
-import logging
-from datetime import datetime
-import json
-import re
-import time
-from typing import Tuple, Dict, Any, Optional, List, Union
 
-# Use a logger specific to this module
 logger_routes = logging.getLogger(__name__)
 
-# Initialize network tester (keep existing logic)
+# Initialize network tester
 try:
     network_tester = NetworkTester()
     logger_routes.info("NetworkTester initialized successfully for routes.")
@@ -46,7 +50,7 @@ except Exception as e:
     network_tester = None
 
 
-# --- Helper Functions (load_iptv_channels, populate_multicast_choices, populate_interface_choices) ---
+# --- Helper Functions ---
 def load_iptv_channels():
     iptv_channels = []
     data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -56,7 +60,6 @@ def load_iptv_channels():
             with open(json_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
             if not content:
-                # logger_routes.info(f"IPTV channel file is empty: {json_path}") # Reduce noise
                 iptv_channels = []
             else:
                 try:
@@ -66,7 +69,6 @@ def load_iptv_channels():
                             f"IPTV channel file does not contain a valid JSON list: {json_path}"
                         )
                         iptv_channels = []
-                    # else: logger_routes.info(f"Loaded {len(iptv_channels)} channels from {json_path}") # Reduce noise
                 except json.JSONDecodeError as json_e:
                     logger_routes.error(
                         f"Error decoding JSON from {json_path}: {json_e}"
@@ -102,7 +104,6 @@ def populate_multicast_choices(form_field):
         logger_routes.error(
             "IPTV channels data is not a list, cannot populate choices."
         )
-    # Use getattr to safely set choices, preventing errors if field doesn't exist
     if hasattr(form_field, "choices"):
         form_field.choices = choices
     else:
@@ -122,21 +123,16 @@ def populate_interface_choices(form_field):
     choices = [("", "-- Auto --")]
     for interface_name in interfaces:
         choices.append((interface_name, interface_name))
-    # Use getattr to safely set choices
     if hasattr(form_field, "choices"):
         form_field.choices = choices
     else:
         logger_routes.warning(
             f"Field {getattr(form_field, 'name', 'UNKNOWN')} has no 'choices' attribute."
         )
-    # logger_routes.debug(f"Populated interface choices: {choices}") # Reduce noise
     return choices
 
 
-# --- Core Configuration Building Logic (_build_stream_config_from_dict, _build_stream_config_from_form) ---
-# Keep these functions as they are in your current file
-
-
+# --- Core Configuration Building Logic ---
 def _build_stream_config_from_dict(
     data: dict, mode: str
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -161,7 +157,7 @@ def _build_stream_config_from_dict(
             if missing_mode:
                 raise ValueError(f"Missing listener fields: {', '.join(missing_mode)}")
             port_int = int(data["port"])
-            if not (10001 <= port_int <= 10010):  # Standard port range
+            if not (10001 <= port_int <= 10010):
                 raise ValueError("Listener port must be 10001-10010.")
             config["port"] = port_int
         elif mode == "caller":
@@ -172,17 +168,12 @@ def _build_stream_config_from_dict(
             if not (1 <= port_int <= 65535):
                 raise ValueError("Target port must be 1-65535.")
             target_addr = data.get("target_address")
-            # Allow hostnames in validation
             if (
                 not target_addr
                 or not isinstance(target_addr, str)
                 or len(target_addr) > 255
-                or not re.match(
-                    r"^[a-zA-Z0-9\.\-\_]+$", target_addr
-                )  # Basic check for valid chars
-                or (
-                    "." not in target_addr and target_addr != "localhost"
-                )  # Ensure dot for FQDN/IP or allow localhost
+                or not re.match(r"^[a-zA-Z0-9\.\-\_]+$", target_addr)
+                or ("." not in target_addr and target_addr != "localhost")
             ):
                 raise ValueError("Invalid or missing target address format.")
             config["target_address"] = target_addr
@@ -195,9 +186,7 @@ def _build_stream_config_from_dict(
             raise ValueError("Overhead must be 1-99%.")
         config["latency"] = latency
         config["overhead_bandwidth"] = overhead
-        config["encryption"] = str(
-            data.get("encryption", "none")
-        ).lower()  # Handle potential None
+        config["encryption"] = str(data.get("encryption", "none")).lower()
         config["passphrase"] = data.get("passphrase", "")
         config["qos"] = bool(data.get("qos", False))
         config["smoothing_latency_ms"] = int(data.get("smoothing_latency_ms", 30))
@@ -205,12 +194,12 @@ def _build_stream_config_from_dict(
         if config["encryption"] not in ["none", "aes-128", "aes-256"]:
             raise ValueError("Invalid encryption type.")
         if config["encryption"] != "none":
-            if not config["passphrase"] or not (10 <= len(config["passphrase"]) <= 79):
+            if not config["passphrase"] or not (10 <= len(config["passphrase"]) <= 80):
                 raise ValueError(
-                    "Valid passphrase (10-79 chars) required for encryption."
+                    "Valid passphrase (10-80 chars) required for encryption."
                 )
         else:
-            config["passphrase"] = ""  # Ensure empty if no encryption
+            config["passphrase"] = ""
         input_type = data["input_type"]
         if input_type == "file":
             config["input_type"] = "file"
@@ -244,14 +233,10 @@ def _build_stream_config_from_dict(
             mc_port = int(mc_port)
             if not (1 <= mc_port <= 65535):
                 raise ValueError("Invalid multicast port.")
-            # More lenient IP validation for multicast
             if not isinstance(mc_address, str) or not re.match(
                 r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", mc_address
             ):
-                # Basic check, could be more robust (e.g., check range 224-239)
-                if not re.match(
-                    r"^[a-zA-Z0-9\.\-]+$", mc_address
-                ):  # Allow hostnames? Usually IPs for multicast
+                if not re.match(r"^[a-zA-Z0-9\.\-]+$", mc_address):
                     raise ValueError("Invalid multicast address format.")
             config["multicast_address"] = mc_address
             config["multicast_port"] = mc_port
@@ -263,7 +248,6 @@ def _build_stream_config_from_dict(
             if resolution not in ["720p50", "1080i25"]:
                 raise ValueError("Invalid colorbar resolution.")
             config["colorbar_resolution"] = resolution
-            # RTP can be used with colorbars (via UDP relay)
         else:
             raise ValueError(f"Unsupported input_type received: {input_type}")
     except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
@@ -286,7 +270,6 @@ def _build_stream_config_from_dict(
 def _build_stream_config_from_form(form, mode):
     data_from_form = {}
     try:
-        # Safely get data using getattr, providing None if field missing
         data_from_form["input_type"] = (
             getattr(form, "input_type", None).data
             if hasattr(form, "input_type")
@@ -323,7 +306,6 @@ def _build_stream_config_from_form(form, mode):
             if hasattr(form, "rtp_encapsulation")
             else False
         )
-
         if mode == "listener":
             data_from_form["port"] = (
                 getattr(form, "port", None).data if hasattr(form, "port") else None
@@ -338,8 +320,7 @@ def _build_stream_config_from_form(form, mode):
                 getattr(form, "target_port", None).data
                 if hasattr(form, "target_port")
                 else None
-            )  # Still need target_port for validation func
-
+            )
         if hasattr(form, "input_type") and form.input_type.data == "file":
             data_from_form["file_path"] = (
                 getattr(form, "file_path", None).data
@@ -367,25 +348,19 @@ def _build_stream_config_from_form(form, mode):
                 if hasattr(form, "multicast_interface")
                 else None
             )
-
-        # Handle missing fields gracefully before validation
         if (
-            None in data_from_form.values()
-            and data_from_form.get("input_type") == "file"
+            data_from_form.get("input_type") == "file"
             and data_from_form.get("file_path") is None
         ):
             return None, "File path is missing."
-        # Add more checks for required fields based on mode/type if needed
-
     except AttributeError as e:
         logger_routes.error(f"Error accessing form field data: {e}", exc_info=True)
         return None, f"Internal error accessing form data: {e}"
-
-    # Now call the dictionary validation function
     return _build_stream_config_from_dict(data_from_form, mode)
 
 
 # Wrap route definitions in a function called by __init__
+# Routes are defined INSIDE this function so they have access to app_instance
 def register_routes(app_instance):
 
     # --- Main Dashboard ---
@@ -420,58 +395,71 @@ def register_routes(app_instance):
         system_info = get_system_info()
         active_streams_initial = {}
         error_getting_streams = None
-
-        # *** MODIFICATION START: Fetch initial data directly from managers ***
         try:
-            # Get standard streams
-            if hasattr(app, "stream_manager") and app.stream_manager:
-                standard_streams = app.stream_manager.get_active_streams()
+            if hasattr(app_instance, "stream_manager") and app_instance.stream_manager:
+                standard_streams = app_instance.stream_manager.get_active_streams()
                 if isinstance(standard_streams, dict):
                     for key, stream_data in standard_streams.items():
                         stream_data["stream_type"] = "standard"
                         active_streams_initial[f"standard_{key}"] = stream_data
+                elif isinstance(standard_streams, dict) and "error" in standard_streams:
+                    error_getting_streams = (
+                        f"Main Manager Error: {standard_streams['error']}"
+                    )
                 else:
                     logger_routes.warning(
-                        "Initial render: Main stream manager get_active_streams did not return a dict."
+                        f"Main stream manager get_active_streams returned unexpected format: {type(standard_streams)}"
+                    )
+                    error_getting_streams = (
+                        "Unexpected format from main stream manager."
+                        if standard_streams is not None and standard_streams != {}
+                        else None
                     )
             else:
-                logger_routes.error(
-                    "Initial render: Main stream manager not found on app instance."
-                )
-                error_getting_streams = "Main Stream Manager service unavailable."
+                error_getting_streams = "Main stream manager service unavailable."
+                logger_routes.error("Main stream manager not found on app instance.")
 
-            # Get SMPTE pairs
-            if hasattr(app, "smpte_manager") and app.smpte_manager:
-                smpte_pairs = app.smpte_manager.get_active_smpte_pairs()
+            if hasattr(app_instance, "smpte_manager") and app_instance.smpte_manager:
+                smpte_pairs = app_instance.smpte_manager.get_active_smpte_pairs()
                 if isinstance(smpte_pairs, dict):
                     for key, pair_data in smpte_pairs.items():
                         pair_data["stream_type"] = "smpte_pair"
                         active_streams_initial[f"smpte_{key}"] = pair_data
+                elif isinstance(smpte_pairs, dict) and "error" in smpte_pairs:
+                    if error_getting_streams:
+                        error_getting_streams += (
+                            f"; SMPTE Manager Error: {smpte_pairs['error']}"
+                        )
+                    else:
+                        error_getting_streams = (
+                            f"SMPTE Manager Error: {smpte_pairs['error']}"
+                        )
                 else:
                     logger_routes.warning(
-                        "Initial render: SMPTE manager get_active_smpte_pairs did not return a dict."
+                        f"SMPTE manager get_active_smpte_pairs returned unexpected format: {type(smpte_pairs)}"
                     )
-            else:
-                # This error should be rare now but good to handle
+                    error_getting_streams = (
+                        "Unexpected format from SMPTE manager."
+                        if not error_getting_streams
+                        and smpte_pairs is not None
+                        and smpte_pairs != {}
+                        else error_getting_streams
+                    )
+            elif not error_getting_streams:
+                error_getting_streams = "SMPTE manager service unavailable."
                 logger_routes.error(
-                    "Initial render: SMPTE manager not found on app instance."
+                    "SMPTE manager not found on app instance (in index)."
                 )
-                if not error_getting_streams:  # Avoid duplicate generic errors
-                    error_getting_streams = "SMPTE Manager service unavailable."
-
         except Exception as e:
             error_getting_streams = f"Error retrieving initial stream list: {e}"
             logger_routes.error(error_getting_streams, exc_info=True)
-        # *** MODIFICATION END ***
-
         if error_getting_streams:
             flash(error_getting_streams, "danger")
-
         return render_template(
             "index.html",
             form=form,
             system_info=system_info,
-            active_streams=active_streams_initial,  # Pass combined dict
+            active_streams=active_streams_initial,
             error=error_message,
             current_year=datetime.utcnow().year,
         )
@@ -482,31 +470,15 @@ def register_routes(app_instance):
         form = StreamForm()
         populate_multicast_choices(form.multicast_channel)
         populate_interface_choices(form.multicast_interface)
-        system_info = get_system_info()  # Needed for re-render on error
-        active_streams = {}  # Needed for re-render on error
+        system_info = get_system_info()
+        active_streams = {}
         error = None
-
-        # Get current streams for re-render (using direct access)
         try:
-            temp_streams = {}
-            if hasattr(app, "stream_manager") and app.stream_manager:
-                standard_s = app.stream_manager.get_active_streams()
-                if isinstance(standard_s, dict):
-                    for k, v in standard_s.items():
-                        v["stream_type"] = "standard"
-                        temp_streams[f"standard_{k}"] = v
-            if hasattr(app, "smpte_manager") and app.smpte_manager:
-                smpte_s = app.smpte_manager.get_active_smpte_pairs()
-                if isinstance(smpte_s, dict):
-                    for k, v in smpte_s.items():
-                        v["stream_type"] = "smpte_pair"
-                        temp_streams[f"smpte_{k}"] = v
-            active_streams = temp_streams
+            active_streams = app_instance.stream_manager.get_active_streams()
         except Exception as e:
             logger_routes.error(
                 f"Error getting streams for re-render in start_listener: {e}"
             )
-
         if form.validate_on_submit():
             config, error_msg = _build_stream_config_from_form(form, "listener")
             if error_msg:
@@ -516,17 +488,22 @@ def register_routes(app_instance):
                 logger_routes.info(
                     f"Attempting start LISTENER (port {config.get('port')}) with built config: {config}"
                 )
-                if not hasattr(app, "stream_manager") or not app.stream_manager:
+                if (
+                    not hasattr(app_instance, "stream_manager")
+                    or not app_instance.stream_manager
+                ):
                     flash("Stream Manager is not available.", "danger")
                     error = "Stream Manager unavailable"
                 else:
-                    success, message = app.stream_manager.start_stream(config=config)
+                    success, message = app_instance.stream_manager.start_stream(
+                        config=config
+                    )
                     if success:
                         flash(
                             f"Listener stream started on port {config.get('port')}.",
                             "success",
                         )
-                        return redirect(url_for("index"))
+                        return redirect(url_for("index"))  # Corrected endpoint
                     else:
                         flash(f"Failed to start stream: {message}", "danger")
                         error = message
@@ -534,15 +511,14 @@ def register_routes(app_instance):
                 flash("Unknown error processing stream configuration.", "danger")
                 error = "Unknown configuration error."
         else:
-            form_errors = {
-                field: errors[0]
-                for field, errors in form.errors.items()
-                if field != "csrf_token"
-            }
+            form_errors = {f: e[0] for f, e in form.errors.items() if f != "csrf_token"}
             error_list_str = "; ".join([f"{k}: {v}" for k, v in form_errors.items()])
             flash(f"Please correct the errors: {error_list_str}", "warning")
             error = f"Form validation failed: {error_list_str}"
-
+        try:
+            active_streams = app_instance.stream_manager.get_active_streams()
+        except:
+            pass
         return render_template(
             "index.html",
             form=form,
@@ -568,11 +544,14 @@ def register_routes(app_instance):
                 logger_routes.info(
                     f"Attempting start CALLER to {config['target_address']}:{config['target_port']} with built config: {config}"
                 )
-                if not hasattr(app, "stream_manager") or not app.stream_manager:
+                if (
+                    not hasattr(app_instance, "stream_manager")
+                    or not app_instance.stream_manager
+                ):
                     flash("Stream Manager is not available.", "danger")
                     error_message = "Stream Manager unavailable"
                 else:
-                    success, message = app.stream_manager.start_stream(
+                    success, message = app_instance.stream_manager.start_stream(
                         config=config, use_target_port_as_key=True
                     )
                     if success:
@@ -580,7 +559,7 @@ def register_routes(app_instance):
                             f"Caller stream to {config.get('target_address')}:{config.get('target_port')} started.",
                             "success",
                         )
-                        return redirect(url_for("index"))
+                        return redirect(url_for("index"))  # Corrected endpoint
                     else:
                         error_message = f"Failed to start stream: {message}"
                         flash(error_message, "danger")
@@ -588,15 +567,10 @@ def register_routes(app_instance):
                 error_message = "Unknown configuration error."
                 flash(error_message, "danger")
         elif request.method == "POST":
-            form_errors = {
-                field: errors[0]
-                for field, errors in form.errors.items()
-                if field != "csrf_token"
-            }
+            form_errors = {f: e[0] for f, e in form.errors.items() if f != "csrf_token"}
             error_list_str = "; ".join([f"{k}: {v}" for k, v in form_errors.items()])
             flash(f"Please correct the errors: {error_list_str}", "warning")
             error_message = f"Form validation failed: {error_list_str}"
-
         return render_template(
             "caller.html",
             form=form,
@@ -605,14 +579,13 @@ def register_routes(app_instance):
         )
 
     # --- UI Data Endpoints ---
-    # Modified /ui/active_streams_data remains the same as provided previously
     @app_instance.route("/ui/active_streams_data")
     def ui_active_streams_data():
         combined_streams = {}
         error_messages = []
         try:
-            if hasattr(app, "stream_manager") and app.stream_manager:
-                standard_streams = app.stream_manager.get_active_streams()
+            if hasattr(app_instance, "stream_manager") and app_instance.stream_manager:
+                standard_streams = app_instance.stream_manager.get_active_streams()
                 if isinstance(standard_streams, dict):
                     for key, stream_data in standard_streams.items():
                         stream_data["stream_type"] = "standard"
@@ -623,12 +596,15 @@ def register_routes(app_instance):
                     )
                 else:
                     logger_routes.warning(
-                        f"Main stream manager get_active_streams did not return a dict (or returned unexpected format): {type(standard_streams)}"
+                        f"Main stream manager get_active_streams returned unexpected format: {type(standard_streams)}"
                     )
-                    if standard_streams is not None and standard_streams != {}:
+                    (
                         error_messages.append(
                             "Unexpected format from main stream manager."
                         )
+                        if standard_streams is not None and standard_streams != {}
+                        else None
+                    )
             else:
                 error_messages.append("Main stream manager service unavailable.")
                 logger_routes.error("Main stream manager not found on app instance.")
@@ -636,8 +612,8 @@ def register_routes(app_instance):
             logger_routes.error(f"Error getting standard streams: {e}", exc_info=True)
             error_messages.append("Failed to retrieve standard streams.")
         try:
-            if hasattr(app, "smpte_manager") and app.smpte_manager:
-                smpte_pairs = app.smpte_manager.get_active_smpte_pairs()
+            if hasattr(app_instance, "smpte_manager") and app_instance.smpte_manager:
+                smpte_pairs = app_instance.smpte_manager.get_active_smpte_pairs()
                 if isinstance(smpte_pairs, dict):
                     for key, pair_data in smpte_pairs.items():
                         pair_data["stream_type"] = "smpte_pair"
@@ -648,11 +624,16 @@ def register_routes(app_instance):
                     )
                 else:
                     logger_routes.warning(
-                        f"SMPTE manager get_active_smpte_pairs did not return a dict (or returned unexpected format): {type(smpte_pairs)}"
+                        f"SMPTE manager get_active_smpte_pairs returned unexpected format: {type(smpte_pairs)}"
                     )
-                    if smpte_pairs is not None and smpte_pairs != {}:
+                    (
                         error_messages.append("Unexpected format from SMPTE manager.")
-            else:
+                        if smpte_pairs is not None and smpte_pairs != {}
+                        else None
+                    )
+            elif not any(
+                "SMPTE manager service unavailable" in msg for msg in error_messages
+            ):
                 error_messages.append("SMPTE manager service unavailable.")
                 logger_routes.error(
                     "SMPTE manager not found on app instance (in /ui/active_streams_data)."
@@ -660,7 +641,6 @@ def register_routes(app_instance):
         except Exception as e:
             logger_routes.error(f"Error getting SMPTE pairs: {e}", exc_info=True)
             error_messages.append("Failed to retrieve SMPTE pairs.")
-
         if not combined_streams and error_messages:
             logger_routes.error(
                 f"No streams found and errors occurred: {error_messages}"
@@ -671,103 +651,73 @@ def register_routes(app_instance):
                 f"Errors encountered fetching stream data for UI: {'; '.join(error_messages)}"
             )
         try:
-            serializable_data = json.loads(
-                json.dumps({"data": combined_streams}, default=str)
+            return jsonify({"data": combined_streams})
+        except Exception as e:
+            logger_routes.critical(
+                f"Critical JSON serialization error for combined streams: {e}"
             )
-            return jsonify(serializable_data)
-        except TypeError as json_e:
-            logger_routes.error(
-                f"JSON serialization error for combined streams: {json_e}"
-            )
-            try:
-                return app.response_class(
-                    response=json.dumps({"data": combined_streams}, default=str),
-                    status=200,
-                    mimetype="application/json",
-                )
-            except Exception as fallback_e:
-                logger_routes.critical(
-                    f"Fallback JSON serialization failed: {fallback_e}"
-                )
-                return jsonify({"error": "Failed to serialize stream data"}), 500
+            return jsonify({"error": "Failed to serialize stream data"}), 500
 
-    # --- Keep ui_stream_stats and ui_stream_debug as they are ---
     @app_instance.route("/ui/stats/<stream_key>")
     def ui_stream_stats(stream_key):
         try:
-            # Standard streams use integer keys
             key_int = int(stream_key)
             if not (0 < key_int < 65536):
                 raise ValueError("Invalid key range")
-            if not hasattr(app, "stream_manager") or not app.stream_manager:
+            if (
+                not hasattr(app_instance, "stream_manager")
+                or not app_instance.stream_manager
+            ):
                 return jsonify({"error": "Stream manager service unavailable."}), 503
-
-            stats = app.stream_manager.get_stream_statistics(str(key_int))
-
+            stats = app_instance.stream_manager.get_stream_statistics(str(key_int))
             if stats is None:
                 return (
                     jsonify({"error": f"Stream {key_int} not found or stopped."}),
                     404,
                 )
-            if isinstance(stats, dict) and "error" in stats:
-                status_code = 404 if "not found" in stats["error"].lower() else 500
+            if isinstance(stats, dict) and stats.get("error"):
+                status_code = (
+                    404
+                    if "not found" in str(stats["error"]).lower()
+                    or "stopped" in str(stats["error"]).lower()
+                    else 500
+                )
                 return jsonify(stats), status_code
             else:
                 stats["timestamp_api"] = time.time()
-                try:
-                    serializable_stats = json.loads(json.dumps(stats, default=str))
-                    return jsonify(serializable_stats)
-                except Exception as e:
-                    logger_routes.error(
-                        f"Failed to serialize stats for key {key_int}: {e}"
-                    )
-                    return jsonify({"error": "Failed to serialize stream stats"}), 500
+                return jsonify(stats)  # Already sanitized
         except ValueError:
             return jsonify({"error": "Invalid stream key format."}), 400
         except Exception as e:
             logger_routes.error(f"Error in /ui/stats/{stream_key}: {e}", exc_info=True)
             return jsonify({"error": "Failed to retrieve stream stats for UI"}), 500
 
-    @app_instance.route("/ui/debug/<stream_key>")
+    @app_instance.route("/ui/debug/<int:stream_key>")
     def ui_stream_debug(stream_key):
-        # Standard streams use integer keys
-        try:
-            key_int = int(stream_key)
-            if not (0 < key_int < 65536):
-                raise ValueError("Invalid key range")
-            if not hasattr(app, "stream_manager") or not app.stream_manager:
-                return jsonify({"error": "Stream manager service unavailable."}), 503
+        """Returns raw debug info for a specific stream as JSON."""
+        if (
+            not hasattr(app_instance, "stream_manager")
+            or not app_instance.stream_manager
+        ):
+            return jsonify({"error": "Stream Manager service unavailable."}), 503
 
-            debug_info = app.stream_manager.get_debug_info(str(key_int))
-
-            if debug_info is None:
-                return (
-                    jsonify(
-                        {"error": f"Could not retrieve debug info for stream {key_int}"}
-                    ),
-                    500,
-                )
-            if isinstance(debug_info, dict) and "error" in debug_info:
-                status_code = 404 if "not found" in debug_info["error"].lower() else 500
-                return jsonify(debug_info), status_code
-            try:
-                serializable_debug = json.loads(json.dumps(debug_info, default=str))
-                return jsonify(serializable_debug)
-            except Exception as e:
-                logger_routes.error(
-                    f"Failed to serialize debug info for key {key_int}: {e}"
-                )
-                return jsonify({"error": "Failed to serialize debug info"}), 500
-        except ValueError:
-            return jsonify({"error": "Invalid stream key format."}), 400
-        except Exception as e:
-            logger_routes.error(f"Error in /ui/debug/{stream_key}: {e}", exc_info=True)
-            return (
-                jsonify({"error": f"Failed to retrieve debug info for UI: {str(e)}"}),
-                500,
+        debug_info = app_instance.stream_manager.get_debug_info(stream_key)
+        error_message = debug_info.get("error")
+        if error_message:
+            error_lower = str(error_message).lower() if error_message else ""
+            status_code = (
+                404
+                if "not found" in error_lower
+                or "missing" in error_lower
+                or "stopped" in error_lower
+                else 500
             )
+            return jsonify({"error": error_message}), status_code
 
-    # --- Keep stop_stream, list_media, media_info, stream_details, health_check as they are ---
+        # Return the sanitized debug info directly as JSON
+        return jsonify(debug_info)
+
+    # --- Stop Stream, Media List, Media Info, Details ---
     @app_instance.route("/stop_stream/<stream_key>", methods=["POST"])
     def stop_stream(stream_key):
         try:
@@ -776,10 +726,13 @@ def register_routes(app_instance):
         except (ValueError, AssertionError):
             flash("Invalid stream identifier.", "danger")
             return redirect(url_for("index"))
-        if not hasattr(app, "stream_manager") or not app.stream_manager:
+        if (
+            not hasattr(app_instance, "stream_manager")
+            or not app_instance.stream_manager
+        ):
             flash("Stream manager service unavailable.", "danger")
             return redirect(url_for("index"))
-        success, message = app.stream_manager.stop_stream(str(key_int))
+        success, message = app_instance.stream_manager.stop_stream(str(key_int))
         if success:
             logger_routes.info(f"Stream stopped via UI: {message}")
             flash(f"Stream ({stream_key}) stopped.", "success")
@@ -795,7 +748,9 @@ def register_routes(app_instance):
     @app_instance.route("/media")
     def list_media():
         media_files = []
-        media_dir = app.config.get("MEDIA_FOLDER", "/opt/mcr-srt-streamer/media")
+        media_dir = app_instance.config.get(
+            "MEDIA_FOLDER", "/opt/mcr-srt-streamer/media"
+        )
         try:
             if not os.path.isdir(media_dir):
                 raise FileNotFoundError(
@@ -821,6 +776,7 @@ def register_routes(app_instance):
 
     @app_instance.route("/media_info/<path:filename>")
     def media_info(filename):
+        # Basic validation to prevent directory traversal
         if (
             ".." in filename
             or filename.startswith("/")
@@ -828,73 +784,128 @@ def register_routes(app_instance):
         ):
             flash("Invalid filename.", "danger")
             return redirect(url_for("index"))
-        info = None
+
+        media_dir = os.path.abspath(app.config["MEDIA_FOLDER"])
+        abs_file_path = os.path.abspath(os.path.join(media_dir, filename))
+
+        # Security check: Ensure the path is still within the media folder
+        if not abs_file_path.startswith(media_dir + os.sep):
+            flash("Access denied.", "danger")
+            return redirect(url_for("index"))
+
+        if not os.path.isfile(abs_file_path):
+            flash(f"Media file not found: {filename}", "danger")
+            return redirect(url_for("index"))
+
         try:
-            media_dir = os.path.abspath(app.config["MEDIA_FOLDER"])
-            base_filename = os.path.basename(filename)
-            if base_filename != filename or os.path.sep in base_filename:
-                raise ValueError("Invalid filename format.")
-            file_path = os.path.abspath(os.path.join(media_dir, base_filename))
-            if not file_path.startswith(media_dir + os.sep) or not os.path.isfile(
-                file_path
-            ):
-                raise FileNotFoundError("File not found or access denied.")
-            if not hasattr(app, "stream_manager") or not app.stream_manager:
-                raise RuntimeError("Stream manager not available")
-            info_str_or_dict = app.stream_manager.get_file_info(base_filename)
-            info = (
-                info_str_or_dict
-                if isinstance(info_str_or_dict, str)
-                else json.dumps(info_str_or_dict, indent=2)
+            # Ensure mediainfo command exists and is executable
+            cmd = [
+                "mediainfo",
+                "--Output=JSON",
+                abs_file_path,
+            ]  # Use JSON output
+            logger_routes.info(f"Running command: {' '.join(cmd)}")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,  # Raise CalledProcessError on non-zero exit
+                timeout=15,  # Add a timeout
             )
-        except (ValueError, FileNotFoundError, RuntimeError) as e:
-            info = json.dumps({"error": str(e)}, indent=2)
-            flash(f"Error accessing file or manager: {str(e)}", "danger")
-        except Exception as e:
-            info = json.dumps(
-                {"error": f"Error getting media info: {str(e)}"}, indent=2
-            )
-            flash(f"Error processing file info: {str(e)}", "danger")
+            info_json_str = result.stdout
+            # Attempt to parse to ensure it's valid JSON before passing
+            try:
+                # Pass the raw JSON string to the template
+                # The template can then decide how to display it (e.g., pre-formatted)
+                # Or parse it here if needed for specific fields
+                json.loads(info_json_str)  # Validate JSON structure
+                info_display = info_json_str
+            except json.JSONDecodeError as json_e:
+                logger_routes.error(
+                    f"Failed to parse mediainfo JSON output for {filename}: {json_e}"
+                )
+                info_display = f"Error: Could not parse mediainfo output.\n\nRaw Output:\n{info_json_str}"
+
+        except FileNotFoundError:
             logger_routes.error(
-                f"Error in media_info for {filename}: {e}", exc_info=True
+                "mediainfo command not found. Please ensure it's installed and in PATH."
             )
-        dummy_form = StreamForm()
-        return render_template(
-            "media_info.html",
-            filename=filename,
-            info=info,
-            form=dummy_form,
-            current_year=datetime.utcnow().year,
-        )
+            info_display = "Error: 'mediainfo' command not found on the server."
+        except subprocess.CalledProcessError as e:
+            logger_routes.error(f"mediainfo command failed for {filename}: {e.stderr}")
+            info_display = f"Error running mediainfo: {e.stderr}"
+        except subprocess.TimeoutExpired:
+            logger_routes.error(f"mediainfo command timed out for {filename}")
+            info_display = "Error: mediainfo command timed out."
+        except Exception as e:
+            logger_routes.error(
+                f"Error getting media info for {filename}: {e}", exc_info=True
+            )
+            info_display = f"Error: An unexpected error occurred ({type(e).__name__})."
+
+        return render_template("media_info.html", filename=filename, info=info_display)
 
     @app_instance.route("/stream/<stream_key>")
     def stream_details(stream_key):
-        # Note: This page currently only supports standard streams
         try:
             key_as_int = int(stream_key)
-            if not (0 < key_as_int < 65536):
-                raise ValueError("Key out of range")
+            assert 0 < key_as_int < 65536
         except (ValueError, AssertionError):
             flash("Invalid stream identifier.", "danger")
             return redirect(url_for("index"))
-        stream_data = None
-        if hasattr(app, "stream_manager") and app.stream_manager:
+
+        debug_info = None
+        error_msg = None
+
+        if hasattr(app_instance, "stream_manager") and app_instance.stream_manager:
             try:
-                active_streams = app.stream_manager.get_active_streams()
-                stream_data = active_streams.get(key_as_int)
+                # *** FETCH FULL DEBUG INFO INSTEAD OF JUST STATS/BASIC INFO ***
+                debug_info = app_instance.stream_manager.get_debug_info(str(key_as_int))
+                error_msg = debug_info.get(
+                    "error"
+                )  # Check for errors within debug info
+
             except Exception as e:
                 logger_routes.error(
-                    f"Error getting stream data for details page key={key_as_int}: {e}",
+                    f"Error getting debug info for details page key={key_as_int}: {e}",
                     exc_info=True,
                 )
-        if not stream_data:
-            flash(f"Stream ({stream_key}) not found.", "warning")
+                error_msg = f"Error fetching details for stream {stream_key}."
+                flash(error_msg, "danger")
+                return redirect(url_for("index"))
+        else:
+            error_msg = "Stream Manager service unavailable."
+            flash(error_msg, "danger")
             return redirect(url_for("index"))
-        dummy_form = StreamForm()
+
+        # --- Check if stream was found or if there was an error getting info ---
+        if error_msg:
+            # Handle errors like "not found" gracefully
+            error_lower = str(error_msg).lower()
+            if (
+                "not found" in error_lower
+                or "missing" in error_lower
+                or "stopped" in error_lower
+            ):
+                flash(
+                    f"Stream ({stream_key}) not found or is stopped. Error: {error_msg}",
+                    "warning",
+                )
+            else:
+                flash(
+                    f"Error getting stream details ({stream_key}): {error_msg}",
+                    "danger",
+                )
+            return redirect(url_for("index"))
+
+        # If we got here, debug_info should be valid (though stats might be empty if not connected)
+        # The dynamic stats will STILL be loaded by stream_details.js, but now using the same debug endpoint.
+        dummy_form = StreamForm()  # Keep for compatibility if template needs it
         return render_template(
             "stream_details.html",
             stream_key=key_as_int,
-            stream=stream_data,
+            # *** PASS THE FULL DEBUG INFO OBJECT ***
+            debug_info=debug_info,  # Pass the entire debug info dict
             form=dummy_form,
             current_year=datetime.utcnow().year,
         )
@@ -903,13 +914,14 @@ def register_routes(app_instance):
     def health_check():
         return "OK", 200
 
-    # --- Keep network_test_page and network_test_api as they are ---
+    # --- Network Test Routes ---
     @app_instance.route("/network_test")
     def network_test_page():
         form = NetworkTestForm()
         location_info = None
         location_error = None
         regions = []
+        global network_tester
         if network_tester:
             try:
                 location_data_dict, location_error_msg = get_external_ip_and_location()

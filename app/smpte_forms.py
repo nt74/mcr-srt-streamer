@@ -11,7 +11,6 @@ from wtforms import (
     SelectField,
     BooleanField,
     HiddenField,
-    PasswordField,
 )
 from wtforms.validators import (
     DataRequired,
@@ -176,11 +175,11 @@ class SMPTEPairForm(FlaskForm):
         render_kw={"class": "form-select", "id": "encryption_smpte"},
         description="SRT encryption type for both streams.",
     )
-    passphrase = PasswordField(
+    passphrase = StringField(
         "Passphrase",
-        validators=[Optional(), Length(min=10, max=79)],
+        validators=[Optional(), Length(min=10, max=80)],
         render_kw={
-            "placeholder": "Required if encryption enabled (10-79 chars)",
+            "placeholder": "Required if encryption enabled (10-80 chars)",
             "class": "form-control",
         },
         description="SRT encryption passphrase for both streams (if enabled).",
@@ -189,7 +188,7 @@ class SMPTEPairForm(FlaskForm):
         "Enable QoS",
         default=False,
         render_kw={"class": "form-check-input"},
-        description="Enable Quality of Service flag (qos=true) for both SRT URIs.",
+        description="Adjusts the pipeline if processing falls behind (e.g., from heavy CPU use), keeping your stream in sync by managing data flow.",
     )
     # --- Pair Leg 1 ---
     output_interface_1 = SelectField(
@@ -261,17 +260,18 @@ class SMPTEPairForm(FlaskForm):
     )
     pair_id = HiddenField()
 
-    # --- Custom Validation (Adds NIC Check) ---
+    # --- Custom Validation (Adds NIC Check & Port/Interface Combo Check) ---
     def validate(self, extra_validators=None):
         # Run initial validators from WTForms
         initial_validation = super(SMPTEPairForm, self).validate(extra_validators)
-        if not initial_validation:
-            return False
+        # We proceed with custom checks even if initial validation fails,
+        # so all errors can be displayed at once. Errors are stored in self.errors
 
         # Assume _populate_shared_choices stored the list
         available_interfaces = getattr(self, "_available_interfaces", [])
         multiple_nics_available = len(available_interfaces) > 1
 
+        # --- Individual Checks (store validity, don't return early) ---
         # Input type validation
         input_type_valid = True
         if self.input_type.data == "multicast":
@@ -280,11 +280,12 @@ class SMPTEPairForm(FlaskForm):
                     "Multicast channel selection is required."
                 )
                 input_type_valid = False
-            if multiple_nics_available and not self.multicast_interface.data:
-                self.multicast_interface.errors.append(
-                    "Please select a specific input interface when multiple NICs are available."
-                )
-                input_type_valid = False
+            # Allow Auto for multicast input interface for now
+            # if multiple_nics_available and not self.multicast_interface.data:
+            #     self.multicast_interface.errors.append(
+            #         "Please select a specific input interface when multiple NICs are available."
+            #     )
+            #     input_type_valid = False
             elif self.multicast_interface.data and not re.match(
                 r"^[a-zA-Z0-9\.\-\_]+$", self.multicast_interface.data
             ):
@@ -301,19 +302,22 @@ class SMPTEPairForm(FlaskForm):
                     "Passphrase is required when encryption is enabled."
                 )
                 encryption_valid = False
-            elif not (10 <= len(self.passphrase.data) <= 79):
+            elif not (
+                10 <= len(self.passphrase.data) <= 80
+            ):  # Use 80 from field definition
                 self.passphrase.errors.append(
-                    "Passphrase must be 10-79 characters long."
+                    "Passphrase must be 10-80 characters long."
                 )
                 encryption_valid = False
 
-        # Port validation
+        # Port validation (Basic: ports must be different)
         ports_valid = True
         if (
             self.port_1.data is not None
             and self.port_2.data is not None
             and self.port_1.data == self.port_2.data
         ):
+            self.port_1.errors.append("Leg 1 and Leg 2 ports must be different.")
             self.port_2.errors.append("Leg 1 and Leg 2 ports must be different.")
             ports_valid = False
 
@@ -322,57 +326,61 @@ class SMPTEPairForm(FlaskForm):
         if self.mode_1.data == "caller":
             if not self.target_address_1.data:
                 self.target_address_1.errors.append(
-                    "Target Host/IP is required for Caller mode."
+                    "Target Host/IP is required for Leg 1 Caller mode."
                 )
                 caller_1_valid = False
-            elif not re.match(r"^[a-zA-Z0-9\.\-\_]+$", self.target_address_1.data):
-                self.target_address_1.errors.append(
-                    "Invalid target address format for Leg 1."
-                )
-                caller_1_valid = False
-            if self.port_1.data is None:
-                self.port_1.errors.append(
-                    "SRT Port is required for Caller mode target."
-                )
-                caller_1_valid = False
+            # Add more specific target validation if needed (e.g., check if it looks like IP or hostname)
 
         caller_2_valid = True
         if self.mode_2.data == "caller":
             if not self.target_address_2.data:
                 self.target_address_2.errors.append(
-                    "Target Host/IP is required for Caller mode."
+                    "Target Host/IP is required for Leg 2 Caller mode."
                 )
                 caller_2_valid = False
-            elif not re.match(r"^[a-zA-Z0-9\.\-\_]+$", self.target_address_2.data):
-                self.target_address_2.errors.append(
-                    "Invalid target address format for Leg 2."
-                )
-                caller_2_valid = False
-            if self.port_2.data is None:
-                self.port_2.errors.append(
-                    "SRT Port is required for Caller mode target."
-                )
-                caller_2_valid = False
+            # Add more specific target validation if needed
 
+        # Output NIC validation (require specific NIC only for Caller if multiple available)
         output_nic_valid = True
         if multiple_nics_available:
-            if not self.output_interface_1.data:  # Check if 'Auto' ('') was selected
+            if self.mode_1.data == "caller" and not self.output_interface_1.data:
                 self.output_interface_1.errors.append(
-                    "Please select a specific output interface when multiple NICs are available."
+                    "Please select a specific output interface for Leg 1 in Caller mode when multiple NICs are available."
                 )
                 output_nic_valid = False
-            if not self.output_interface_2.data:  # Check if 'Auto' ('') was selected
+            if self.mode_2.data == "caller" and not self.output_interface_2.data:
                 self.output_interface_2.errors.append(
-                    "Please select a specific output interface when multiple NICs are available."
+                    "Please select a specific output interface for Leg 2 in Caller mode when multiple NICs are available."
                 )
                 output_nic_valid = False
 
-        # Return True only if all checks pass
+        port_interface_combo_valid = True
+        # Check only if ports have values and interfaces are selected (not 'Auto')
+        if (
+            self.port_1.data is not None
+            and self.port_2.data is not None
+            and self.output_interface_1.data  # Checks if the string is not empty ('')
+            and self.output_interface_2.data  # Checks if the string is not empty ('')
+            and self.port_1.data == self.port_2.data
+            and self.output_interface_1.data == self.output_interface_2.data
+        ):
+            # Only raise error if BOTH port AND selected interface are identical
+            error_msg = "Leg 1 and Leg 2 cannot use the same Port and selected Output Interface combination."
+            # Add error to multiple fields for visibility
+            self.port_1.errors.append(error_msg)
+            self.port_2.errors.append(error_msg)  # Also add to port 2
+            self.output_interface_1.errors.append(error_msg)
+            self.output_interface_2.errors.append(error_msg)  # Also add to interface 2
+            port_interface_combo_valid = False
+
+        # Return True only if initial validation AND all custom checks pass
         return (
-            input_type_valid
+            initial_validation
+            and input_type_valid
             and encryption_valid
             and ports_valid
             and caller_1_valid
             and caller_2_valid
             and output_nic_valid
+            and port_interface_combo_valid
         )

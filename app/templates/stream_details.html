@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream Details {{ stream_key }} - MCR SRT Streamer</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Stream Details {{ stream_key }} - MCR SRT Streamer</title>
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='css/all.min.css') }}">
+        <link rel="stylesheet"
+              href="{{ url_for('static', filename='css/style.css') }}">
+        <style>
         /* Keep existing styles */
         .stat-circle { display: inline-block; border: 5px solid #dee2e6; border-radius: 50%; width: 120px; height: 120px; line-height: 1.2; text-align: center; padding-top: 30px; margin-bottom: 10px; font-size: 1.1rem; }
         .stat-circle .stat-value { display: block; font-size: 1.8rem; font-weight: bold; }
@@ -17,79 +20,283 @@
         #loss-card .stat-circle { border-color: rgba(220, 53, 69, 0.5); }
         .progress-thin { height: 5px; }
         .table td i.fa-fw { margin-right: 5px; }
-    </style>
-</head>
-<body>
-    <div class="container mt-4">
-        {# Header Section #}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-             <div class="d-flex align-items-center">
-                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SVT Logo" style="height: 40px; margin-right: 15px;">
-                 <h1><i class="fas fa-broadcast-tower"></i> Stream Details {% if stream.mode == 'caller' %}<span class="badge bg-warning text-dark ms-2">Caller: {{ stream.target or stream_key }}</span>{% else %}<span class="badge bg-primary ms-2">Listener Port: {{ stream_key }}</span>{% endif %}</h1>
-             </div>
-            <div><a href="{{ url_for('index') }}" class="btn btn-secondary" title="Back to Dashboard"><i class="fas fa-arrow-left"></i> Back</a><form method="POST" action="{{ url_for('stop_stream', stream_key=stream_key) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to stop stream {{ stream_key }}?');" class="ms-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-danger" title="Stop this stream"><i class="fas fa-stop-circle"></i> Stop Stream</button></form></div>
+        </style>
+    </head>
+    <body>
+        <div class="container mt-4">
+            {# Header Section - Use debug_info for mode/target display, stream_key for title/stop #}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}"
+                         alt="SVT Logo"
+                         style="height: 40px;
+                                margin-right: 15px">
+                    <h1>
+                        <i class="fas fa-broadcast-tower"></i> Stream Details
+                        {% if debug_info.mode == 'caller' %}
+                            <span class="badge bg-warning text-dark ms-2">Caller: {{ debug_info.config.target_address or '?' }}:{{ debug_info.config.target_port or '?' }}</span>
+                        {% else %}
+                            <span class="badge bg-primary ms-2">Listener Port: {{ stream_key }}</span>
+                        {% endif %}
+                    </h1>
+                </div>
+                <div>
+                    <a href="{{ url_for("index") }}"
+                       class="btn btn-secondary"
+                       title="Back to Dashboard"><i class="fas fa-arrow-left"></i> Back</a>
+                    <form method="POST"
+                          action="{{ url_for('stop_stream', stream_key=stream_key) }}"
+                          style="display: inline"
+                          onsubmit="return confirm('Are you sure you want to stop stream {{ stream_key }}?');"
+                          class="ms-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger" title="Stop this stream">
+                            <i class="fas fa-stop-circle"></i> Stop Stream
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {# Stream Info Card - Use stream_key for data attribute, debug_info for content #}
+            <div class="card mb-4" id="stream-info" data-stream-key="{{ stream_key }}">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-info-circle"></i> Stream Information
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p>
+                                <strong><i class="fas fa-sign-in-alt fa-fw"></i> Input:</strong> <span class="text-break">{{ debug_info.input_detail or 'N/A' }}</span>
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-sign-in-alt fa-fw"></i> Mode:</strong> {{ debug_info.mode | capitalize }}
+                            </p>
+                            {% if debug_info.mode == 'caller' %}
+                                <p>
+                                    <strong><i class="fas fa-map-marker-alt fa-fw"></i> Target:</strong> {{ debug_info.config.target_address or 'N/A' }}:{{ debug_info.config.target_port or 'N/A' }}
+                                </p>
+                            {% else %}
+                                <p>
+                                    <strong><i class="fas fa-user fa-fw"></i> Client:</strong> <span id="client-ip">{{ debug_info.connected_client or 'None Connected' }}</span>
+                                </p>
+                            {% endif %}
+                            <p>
+                                <strong><i class="fas fa-sliders-h fa-fw"></i> Smoothing:</strong> {{ debug_info.config.smoothing_latency_ms or 'N/A' }} ms
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-history fa-fw"></i> Latency:</strong> {{ debug_info.config.latency or 'N/A' }} ms
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-handshake fa-fw"></i> Negotiated Latency:</strong> <span id="negotiated-latency">{{ debug_info.stats.negotiated_latency_ms if debug_info.stats else '...' }}</span> ms
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-network-wired fa-fw"></i> Overhead:</strong> {{ debug_info.config.overhead_bandwidth or 'N/A' }}%
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p>
+                                <strong><i class="fas fa-lock fa-fw"></i> Encryption:</strong> {{ (debug_info.config.encryption | capitalize).replace('_', '-') }}
+                                {% if debug_info.config.encryption != 'none' %}
+                                    ({{ ('<span class="badge bg-success">Set</span>' if debug_info.config.passphrase else '<span class="badge bg-danger">Missing</span>') | safe }})
+                                {% else %}
+                                    (<span class="text-muted fst-italic">N/A</span>)
+                                {% endif %}
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-check-circle fa-fw"></i> QoS:</strong> <span class="badge {{ 'bg-success' if debug_info.config.qos else 'bg-secondary' }}"> {{ 'Enabled' if debug_info.config.qos else 'Disabled' }} </span>
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-calendar-alt fa-fw"></i> Started:</strong> <span id="start-time-display">N/A</span>
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-hourglass-half fa-fw"></i> Uptime:</strong> <span id="uptime">Calculating...</span>
+                            </p>
+                            <p>
+                                <strong><i class="fas fa-wifi fa-fw"></i> Status:</strong> <span id="status" class="badge bg-secondary">{{ debug_info.status or 'Unknown' }}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <p class="mt-2 mb-0">
+                        <small><strong><i class="fas fa-link fa-fw"></i> SRT URI:</strong> <code class="text-break">{{ debug_info.srt_uri or 'N/A' }}</code></small>
+                    </p>
+                </div>
+            </div>
+            {# Stat Cards - These are populated by JS, structure remains the same #}
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-4" id="bitrate-card">
+                        <div class="card-header bg-success text-white">
+                            <i class="fas fa-tachometer-alt"></i> Bitrate
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="stat-circle">
+                                <span id="bitrate-value" class="stat-value">0</span> <span class="stat-unit">Mbps</span>
+                            </div>
+                            <div class="progress progress-thin mt-2">
+                                <div class="progress-bar bg-success"
+                                     id="bitrate-bar"
+                                     role="progressbar"
+                                     style="width: 0%"></div>
+                            </div>
+                            <small class="text-muted" id="send-rate-label">Send Rate</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4" id="rtt-card">
+                        <div class="card-header bg-info text-white">
+                            <i class="fas fa-exchange-alt"></i> Round Trip Time
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="stat-circle">
+                                <span id="rtt-value" class="stat-value">0</span> <span class="stat-unit">ms</span>
+                            </div>
+                            <div class="progress progress-thin mt-2">
+                                <div class="progress-bar bg-info"
+                                     id="rtt-bar"
+                                     role="progressbar"
+                                     style="width: 0%"></div>
+                            </div>
+                            <small class="text-muted">Smoothed RTT</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4" id="loss-card">
+                        <div class="card-header bg-danger text-white">
+                            <i class="fas fa-exclamation-triangle"></i> Packet Loss
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="stat-circle">
+                                <span id="loss-value" class="stat-value">0.0</span> <span class="stat-unit">%</span>
+                            </div>
+                            <div class="progress progress-thin mt-2">
+                                <div class="progress-bar bg-danger"
+                                     id="loss-bar"
+                                     role="progressbar"
+                                     style="width: 0%"></div>
+                            </div>
+                            <small class="text-muted" id="loss-detail">Lost / Sent Pkts</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {# Chart Section - Populated by JS #}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-chart-line"></i> Statistics History (Last 30 updates)
+                </div>
+                <div class="card-body">
+                    <canvas id="stats-chart" height="120"></canvas>
+                </div>
+            </div>
+            {# Packet Counters Section - Populated by JS #}
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-list-alt"></i> Packet Counters
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless table-striped mb-0 small">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <strong>Pkts Sent:</strong>
+                                        </td>
+                                        <td id="packets-sent" class="text-end fw-bold">0</td>
+                                        <td>
+                                            <strong>Pkts Recv:</strong>
+                                        </td>
+                                        <td id="packets-received" class="text-end fw-bold">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <strong>Pkts Lost:</strong>
+                                        </td>
+                                        <td id="packets-lost" class="text-end fw-bold text-danger">0</td>
+                                        <td>
+                                            <strong>Pkts Retrans:</strong>
+                                        </td>
+                                        <td id="packets-retransmitted" class="text-end fw-bold text-warning">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <strong>Bytes Sent:</strong>
+                                        </td>
+                                        <td id="bytes-sent" colspan="3" class="text-end fw-bold">0 B</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {# Debug Info Section - Populated by JS (button logic uses debug endpoint anyway) #}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header bg-dark text-white">
+                            <i class="fas fa-bug"></i> Debug Information
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                <button class="btn btn-sm btn-outline-secondary mb-2 me-3"
+                                        type="button"
+                                        id="show-debug-info"
+                                        title="Show/Hide Raw SRT Statistics">
+                                    <i class="fas fa-code"></i> Toggle Raw Stats
+                                </button>
+                                <small class="text-muted mb-2">Last Stats Update: <span id="stats-last-updated" class="fw-bold">-</span></small>
+                            </div>
+                            <div id="debug-info" style="display:none; margin-top:15px;">
+                                <pre class="bg-light p-2 border rounded"
+                                     style="max-height:300px;
+                                            overflow-y:auto;
+                                            font-size: 0.8rem"
+                                     id="debug-content">Loading debug info...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {# Footer Section (Standardized) #}
+            <footer class="mt-5 mb-3 text-center text-muted">
+                <hr>
+                <p>
+                    &copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause"
+    target="_blank"
+    rel="noopener noreferrer">BSD-2-Clause License</a>.
+                </p>
+                <p class="small">
+                    Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html"
+    target="_blank"
+    rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.
+                </p>
+                {# This condition is unlikely to be true on this page, but keep for consistency if needed #}
+                {% if request.endpoint == 'network_test_page' %}
+                    <p class="small">
+                        Network test uses `ping`
+                        {% if network_test_mechanism == 'iperf' %}and `iperf3` (UDP/TCP){% endif %}
+                        . Recommendations may use assumed loss if iperf3 is disabled or fails.
+                    </p>
+                    <p class="small">
+                        Public iperf3 server list data provided by <a href="https://iperf3serverlist.net/"
+    target="_blank"
+    rel="noopener noreferrer">iperf3serverlist.net</a>, used under the <a href="https://opensource.org/licenses/MIT"
+    target="_blank"
+    rel="noopener noreferrer">MIT License</a>.
+                    </p>
+                {% endif %}
+            </footer>
         </div>
-
-        {# Stream Info Card - Added Negotiated Latency #}
-        <div class="card mb-4" id="stream-info" data-stream-key="{{ stream_key }}">
-             <div class="card-header bg-primary text-white"> <i class="fas fa-info-circle"></i> Stream Information </div>
-             <div class="card-body">
-                 <div class="row">
-                     <div class="col-md-6">
-                         <p><strong><i class="fas fa-sign-in-alt fa-fw"></i> Input:</strong> <span class="text-break">{{ stream.input_type|capitalize }}: {{ stream.source_detail }}</span></p>
-                         <p><strong><i class="fas fa-sign-in-alt fa-fw"></i> Mode:</strong> {{ stream.mode|capitalize }}</p>
-                         {% if stream.mode == 'caller' %}<p><strong><i class="fas fa-map-marker-alt fa-fw"></i> Target:</strong> {{ stream.target or 'N/A' }}</p>{% else %}<p><strong><i class="fas fa-user fa-fw"></i> Client:</strong> <span id="client-ip">{{ stream.connected_client or 'None Connected' }}</span></p>{% endif %}
-                         <p><strong><i class="fas fa-sliders-h fa-fw"></i> Smoothing:</strong> {{ stream.smoothing_latency_ms or 'N/A' }} ms</p>
-                         <p><strong><i class="fas fa-history fa-fw"></i> Latency:</strong> {{ stream.latency }} ms</p>
-                         {# *** ADDED Negotiated Latency Display Line *** #}
-                         <p><strong><i class="fas fa-handshake fa-fw"></i> Negotiated Latency:</strong> <span id="negotiated-latency">...</span> ms</p>
-                         <p><strong><i class="fas fa-network-wired fa-fw"></i> Overhead:</strong> {{ stream.overhead_bandwidth }}%</p>
-                     </div>
-                     <div class="col-md-6">
-                         <p><strong><i class="fas fa-lock fa-fw"></i> Encryption:</strong> {{ (stream.encryption | capitalize).replace('_', '-') }} {% if stream.encryption != 'none' %} ({{ ('<span class="badge bg-success">Set</span>' if stream.passphrase_set else '<span class="badge bg-danger">Missing</span>') | safe }}) {% else %} (<span class="text-muted fst-italic">N/A</span>) {% endif %} </p>
-                         <p><strong><i class="fas fa-check-circle fa-fw"></i> QoS:</strong> <span class="badge {{ 'bg-success' if stream.qos_enabled else 'bg-secondary' }}"> {{ 'Enabled' if stream.qos_enabled else 'Disabled' }} </span> </p>
-                         <p><strong><i class="fas fa-calendar-alt fa-fw"></i> Started:</strong> {{ stream.start_time }}</p>
-                         <p><strong><i class="fas fa-hourglass-half fa-fw"></i> Uptime:</strong> <span id="uptime">Calculating...</span></p>
-                         <p><strong><i class="fas fa-wifi fa-fw"></i> Status:</strong> <span id="status" class="badge bg-secondary">{{ stream.connection_status }}</span></p>
-                     </div>
-                 </div>
-                 <p class="mt-2 mb-0"><small><strong><i class="fas fa-link fa-fw"></i> SRT URI:</strong> <code class="text-break">{{ stream.srt_uri }}</code></small></p>
-             </div>
-         </div>
-
-        {# Stat Cards #}
-        <div class="row"><div class="col-md-4"><div class="card mb-4" id="bitrate-card"><div class="card-header bg-success text-white"><i class="fas fa-tachometer-alt"></i> Bitrate</div><div class="card-body text-center"><div class="stat-circle"><span id="bitrate-value" class="stat-value">0</span> <span class="stat-unit">Mbps</span></div><div class="progress progress-thin mt-2"><div class="progress-bar bg-success" id="bitrate-bar" role="progressbar" style="width: 0%"></div></div><small class="text-muted" id="send-rate-label">Send Rate</small></div></div></div><div class="col-md-4"><div class="card mb-4" id="rtt-card"><div class="card-header bg-info text-white"><i class="fas fa-exchange-alt"></i> Round Trip Time</div><div class="card-body text-center"><div class="stat-circle"><span id="rtt-value" class="stat-value">0</span> <span class="stat-unit">ms</span></div><div class="progress progress-thin mt-2"><div class="progress-bar bg-info" id="rtt-bar" role="progressbar" style="width: 0%"></div></div><small class="text-muted">Smoothed RTT</small></div></div></div><div class="col-md-4"><div class="card mb-4" id="loss-card"><div class="card-header bg-danger text-white"><i class="fas fa-exclamation-triangle"></i> Packet Loss</div><div class="card-body text-center"><div class="stat-circle"><span id="loss-value" class="stat-value">0.0</span> <span class="stat-unit">%</span></div><div class="progress progress-thin mt-2"><div class="progress-bar bg-danger" id="loss-bar" role="progressbar" style="width: 0%"></div></div><small class="text-muted" id="loss-detail">Lost / Sent Pkts</small></div></div></div></div>
-
-        {# Chart Section #}
-        <div class="card mb-4"><div class="card-header bg-primary text-white"> <i class="fas fa-chart-line"></i> Statistics History (Last 30 updates) </div><div class="card-body"> <canvas id="stats-chart" height="120"></canvas> </div></div>
-
-        {# Packet Counters Section #}
-        <div class="row"><div class="col-md-12"><div class="card mb-4"><div class="card-header bg-secondary text-white"> <i class="fas fa-list-alt"></i> Packet Counters </div><div class="card-body"><table class="table table-sm table-borderless table-striped mb-0 small"><tbody><tr> <td><strong>Pkts Sent:</strong></td><td id="packets-sent" class="text-end fw-bold">0</td> <td><strong>Pkts Recv:</strong></td><td id="packets-received" class="text-end fw-bold">0</td> </tr><tr> <td><strong>Pkts Lost:</strong></td><td id="packets-lost" class="text-end fw-bold text-danger">0</td> <td><strong>Pkts Retrans:</strong></td><td id="packets-retransmitted" class="text-end fw-bold text-warning">0</td> </tr><tr> <td><strong>Bytes Sent:</strong></td><td id="bytes-sent" colspan="3" class="text-end fw-bold">0 B</td> </tr></tbody></table></div></div></div></div>
-
-        {# Debug Info Section #}
-        <div class="row"><div class="col-12"><div class="card mb-4"><div class="card-header bg-dark text-white"> <i class="fas fa-bug"></i> Debug Information </div><div class="card-body"><div class="d-flex justify-content-between align-items-center flex-wrap"> <button class="btn btn-sm btn-outline-secondary mb-2 me-3" type="button" id="show-debug-info" title="Show/Hide Raw SRT Statistics"> <i class="fas fa-code"></i> Toggle Raw Stats </button> <small class="text-muted mb-2">Last Stats Update: <span id="stats-last-updated" class="fw-bold">-</span></small> </div><div id="debug-info" style="display:none; margin-top:15px;"> <pre class="bg-light p-2 border rounded" style="max-height:300px; overflow-y:auto; font-size: 0.8rem;" id="debug-content">Loading debug info...</pre> </div></div></div></div></div>
-
-        {# Footer Section (Standardized) #}
-        <footer class="mt-5 mb-3 text-center text-muted">
-            <hr>
-            <p>&copy; {{ current_year or 2025 }} Nikos Toutountzoglou, Sveriges Television AB. Licensed under the <a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank" rel="noopener noreferrer">BSD-2-Clause License</a>.</p>
-            <p class="small">Uses the <a href="https://b2b.svt.se/visuell-identitet/designmanual.html" target="_blank" rel="noopener noreferrer">Publik</a> font designed by Sveriges Television AB.</p>
-            {% if request.endpoint == 'network_test_page' %} {# This block will not render on this page #}
-               <p class="small">Network test uses `ping`{% if network_test_mechanism == 'iperf' %} and `iperf3` (UDP/TCP){% endif %}. Recommendations may use assumed loss if iperf3 is disabled or fails.</p>
-               <p class="small"> Public iperf3 server list data provided by <a href="https://iperf3serverlist.net/" target="_blank" rel="noopener noreferrer">iperf3serverlist.net</a>, used under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
-            {% endif %}
-        </footer>
-
-    </div> {# End Container #}
-
-    {# --- Links to External JavaScript --- #}
-    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script> {# Chart.js needed here #}
-    {# Shared Helpers #}
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    {# Page Specific Logic #}
-    <script src="{{ url_for('static', filename='js/stream_details.js') }}"></script>
-
-</body>
+        {# End Container #}
+        {# --- Links to External JavaScript --- #}
+        <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script> {# Chart.js needed here #}
+        {# Shared Helpers #}
+        <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+        {# Page Specific Logic - Assumes stream_details.js fetches from /ui/debug/<key> now #}
+        <script src="{{ url_for('static', filename='js/stream_details.js') }}"></script>
+    </body>
 </html>

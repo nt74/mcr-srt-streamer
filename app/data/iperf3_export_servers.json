@@ -1,7 +1,16 @@
 [
     {
-        "IP_HOST": "iperf3 -c 41.110.39.130",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c iperf.angolacables.co.ao -p 9200-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB_S": "10",
+        "COUNTRY": "AO",
+        "SITE": "Luanda",
+        "CONTINENT": "Africa",
+        "PROVIDER": "Angola Cables"
+    },
+    {
+        "IP_HOST": "iperf3 -c 41.110.39.130 -p 5201",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "DZ",
         "SITE": "Algiers",
@@ -10,7 +19,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 213.158.175.240",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "EG",
         "SITE": "Cairo",
@@ -19,7 +28,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 102.214.66.39",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "2x10",
         "COUNTRY": "GN",
         "SITE": "Accra",
@@ -28,7 +37,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 102.214.66.19",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "2x10",
         "COUNTRY": "GN",
         "SITE": "Accra",
@@ -46,7 +55,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtestfl.telecom.mu -p 5201-5209",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "MU",
         "SITE": "Floreal",
@@ -55,7 +64,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.telecom.mu -p 5201-5209",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "MU",
         "SITE": "Port Louis",
@@ -64,7 +73,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 41.226.22.119 -p 9202-9240",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "TN",
         "SITE": "Tunis",
@@ -72,8 +81,8 @@
         "PROVIDER": "Topnet"
     },
     {
-        "IP_HOST": "iperf3 -c 197.26.19.243 -p 9200-9240",
-        "OPTIONS": "-R",
+        "IP_HOST": "iperf3 -c 197.26.19.243 -p 9200-9210",
+        "OPTIONS": "-u",
         "GB_S": "",
         "COUNTRY": "TN",
         "SITE": "Tunis",
@@ -82,7 +91,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 41.210.185.162",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "2x10",
         "COUNTRY": "UG",
         "SITE": "Kampala",
@@ -91,7 +100,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 169.150.238.161",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "ZA",
         "SITE": "Johannesburg",
@@ -109,7 +118,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 84.17.57.129",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "HK",
         "SITE": "Hong Kong",
@@ -118,7 +127,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.myrepublic.net.id -p 9200-9240",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "ID",
         "SITE": "Jakarta",
@@ -127,7 +136,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 103.185.255.183 -p 5201-5230",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "ID",
         "SITE": "Jakarta",
@@ -136,7 +145,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speed.netfiber.net.il",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "1",
         "COUNTRY": "IL",
         "SITE": "Jerusalem",
@@ -154,7 +163,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 169.150.202.193",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "IL",
         "SITE": "Tel Aviv",
@@ -171,7 +180,7 @@
         "PROVIDER": "Arvancloud"
     },
     {
-        "IP_HOST": "iperf3 -c shahriar.iperf3.ir -p 5207",
+        "IP_HOST": "iperf3 -c shahriar.iperf3.ir -p 5200-5209",
         "OPTIONS": "-R,-6",
         "GB_S": "10",
         "COUNTRY": "IR",
@@ -180,7 +189,7 @@
         "PROVIDER": "ArvanCloud"
     },
     {
-        "IP_HOST": "iperf3 -c bamdad.iperf3.ir -p 5208",
+        "IP_HOST": "iperf3 -c bamdad.iperf3.ir -p 5200-5209",
         "OPTIONS": "-R,-6",
         "GB_S": "10",
         "COUNTRY": "IR",
@@ -199,7 +208,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 89.187.160.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "JP",
         "SITE": "Tokyo",
@@ -207,17 +216,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c 91.185.23.98",
-        "OPTIONS": "-R",
-        "GB_S": "",
-        "COUNTRY": "KZ",
-        "SITE": "Aktau",
-        "CONTINENT": "Asia",
-        "PROVIDER": ""
-    },
-    {
         "IP_HOST": "iperf3 -c iperf.myren.net.my -p 5201-5210",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "MY",
         "SITE": "Kuala Lumpur",
@@ -235,7 +235,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 89.187.162.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "SG",
         "SITE": "Singapore",
@@ -252,8 +252,8 @@
         "PROVIDER": "Singnet"
     },
     {
-        "IP_HOST": "iperf3 -c sgp.proof.ovh.net -p 5201-5210",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c sgp.proof.ovh.net -p 5204-5209",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "1",
         "COUNTRY": "SG",
         "SITE": "Singapore",
@@ -261,8 +261,8 @@
         "PROVIDER": "OVH"
     },
     {
-        "IP_HOST": "iperf3 -c 202.29.80.9 -p 9200-9240",
-        "OPTIONS": "-R",
+        "IP_HOST": "iperf3 -c 202.29.80.9 -p 9207-9223",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "",
         "COUNTRY": "TH",
         "SITE": "Phitsanulok",
@@ -270,7 +270,7 @@
         "PROVIDER": "psru"
     },
     {
-        "IP_HOST": "iperf3 -c 58.64.45.56 -p 9200-9240",
+        "IP_HOST": "iperf3 -c 58.64.45.56 -p 9207-9223",
         "OPTIONS": "-R",
         "GB_S": "",
         "COUNTRY": "TH",
@@ -280,7 +280,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 156.146.52.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "TR",
         "SITE": "Istanbul",
@@ -289,7 +289,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.uztelecom.uz -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "UZ",
         "SITE": "Tashkent",
@@ -307,7 +307,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.180.12.40",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "AT",
         "SITE": "Vienna",
@@ -316,7 +316,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 207.211.214.65",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "BE",
         "SITE": "Brussels",
@@ -325,7 +325,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 37.19.203.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "BG",
         "SITE": "Sofia",
@@ -333,8 +333,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c speedtest.shinternet.ch -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c speedtest.shinternet.ch -p 5200-5219",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "CH",
         "SITE": "Schaffhausen",
@@ -343,7 +343,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.init7.net",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "20",
         "COUNTRY": "CH",
         "SITE": "Winterthur",
@@ -352,7 +352,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.iway.ch",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "CH",
         "SITE": "Z\u00fcrich",
@@ -361,7 +361,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 89.187.165.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "CH",
         "SITE": "Z\u00fcrich",
@@ -369,7 +369,7 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c rychlost.poda.cz -p 5203-5205",
+        "IP_HOST": "iperf3 -c rychlost.poda.cz -p 5201-5209",
         "OPTIONS": "-R",
         "GB_S": "",
         "COUNTRY": "CZ",
@@ -379,7 +379,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.152.65.113",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "CZ",
         "SITE": "Prague",
@@ -414,8 +414,8 @@
         "PROVIDER": "WOBCOM"
     },
     {
-        "IP_HOST": "iperf3 -c 178.215.228.109 -p 9201-9240",
-        "OPTIONS": "-R",
+        "IP_HOST": "iperf3 -c 178.215.228.109 -p 9204-9240",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "DE",
         "SITE": "Frankfurt",
@@ -424,7 +424,7 @@
     },
     {
         "IP_HOST": "iperf3 -c fra.speedtest.clouvider.net -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "DE",
         "SITE": "Frankfurt",
@@ -433,7 +433,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.ip-projects.de",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "DE",
         "SITE": "Frankfurt",
@@ -450,7 +450,7 @@
         "PROVIDER": "LeaseWeb"
     },
     {
-        "IP_HOST": "iperf3 -c spd-desrv.hostkey.com -p 5201",
+        "IP_HOST": "iperf3 -c spd-desrv.hostkey.com -p 5201-5209",
         "OPTIONS": "-R",
         "GB_S": "10",
         "COUNTRY": "DE",
@@ -478,7 +478,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.102.219.93",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "DE",
         "SITE": "Frankfurt",
@@ -487,7 +487,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.wtnet.de -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "40",
         "COUNTRY": "DE",
         "SITE": "Norderstedt",
@@ -513,17 +513,8 @@
         "PROVIDER": "WOBCOM"
     },
     {
-        "IP_HOST": "iperf3 -c speed.fiberby.dk -p 9201-9240",
-        "OPTIONS": "-R,-6",
-        "GB_S": "10",
-        "COUNTRY": "DK",
-        "SITE": "Copenhagen",
-        "CONTINENT": "Europe",
-        "PROVIDER": "Fiberby"
-    },
-    {
-        "IP_HOST": "iperf3 -c speedtest.hiper.dk -p 5201-5203",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c speedtest.hiper.dk -p 5201-5205",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "",
         "COUNTRY": "DK",
         "SITE": "Copenhagen",
@@ -540,8 +531,26 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c 185.93.3.50",
-        "OPTIONS": "-R",
+        "IP_HOST": "iperf3 -c speed1.fiberby.dk -p 9201-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB_S": "25",
+        "COUNTRY": "DK",
+        "SITE": "Copenhagen",
+        "CONTINENT": "Europe",
+        "PROVIDER": "Fiberby"
+    },
+    {
+        "IP_HOST": "iperf3 -c speed2.fiberby.dk -p 9201-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB_S": "25",
+        "COUNTRY": "DK",
+        "SITE": "Copenhagen",
+        "CONTINENT": "Europe",
+        "PROVIDER": "Fiberby"
+    },
+    {
+        "IP_HOST": "iperf3 -c 185.93.3.50 -p 5201",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "ES",
         "SITE": "Madrid",
@@ -549,7 +558,7 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c spd-fisrv.hostkey.com -p 5201",
+        "IP_HOST": "iperf3 -c spd-fisrv.hostkey.com -p 5201-5209",
         "OPTIONS": "-R",
         "GB_S": "10",
         "COUNTRY": "FI",
@@ -559,7 +568,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 138.199.14.66",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "FR",
         "SITE": "Marseille",
@@ -568,7 +577,7 @@
     },
     {
         "IP_HOST": "iperf3 -c proof.ovh.net -p 5201-5210",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-6,-u",
         "GB_S": "10",
         "COUNTRY": "FR",
         "SITE": "Paris",
@@ -577,7 +586,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.93.2.193",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "FR",
         "SITE": "Paris",
@@ -604,7 +613,7 @@
     },
     {
         "IP_HOST": "iperf3 -c iperf.online.net -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "100",
         "COUNTRY": "FR",
         "SITE": "Paris",
@@ -612,7 +621,7 @@
         "PROVIDER": "Scaleway"
     },
     {
-        "IP_HOST": "iperf3 -c scaleway.testdebit.info -p 5200-5209",
+        "IP_HOST": "iperf3 -c scaleway.testdebit.info -p 9200-9240",
         "OPTIONS": "-R,-6",
         "GB_S": "10",
         "COUNTRY": "FR",
@@ -622,7 +631,7 @@
     },
     {
         "IP_HOST": "iperf3 -c ping.online.net -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "100",
         "COUNTRY": "FR",
         "SITE": "Vitry-sur-Seine",
@@ -631,7 +640,7 @@
     },
     {
         "IP_HOST": "iperf3 -c iperf.as42831.net -p 5300-5400",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "GB",
         "SITE": "London",
@@ -657,7 +666,7 @@
         "PROVIDER": "LeaseWeb"
     },
     {
-        "IP_HOST": "iperf3 -c lon.speedtest.clouvider.net -p 5200-5209",
+        "IP_HOST": "iperf3 -c lon.speedtest.clouvider.net -p 5200-5208",
         "OPTIONS": "-R,-6",
         "GB_S": "10",
         "COUNTRY": "GB",
@@ -667,7 +676,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.59.221.51",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "GB",
         "SITE": "London",
@@ -676,7 +685,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 169.150.252.2",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "GR",
         "SITE": "Athens",
@@ -685,7 +694,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 169.150.242.129",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "HR",
         "SITE": "Zagreb",
@@ -693,17 +702,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c speedtest1.vodafone.hu",
-        "OPTIONS": "-R",
-        "GB_S": "1",
-        "COUNTRY": "HU",
-        "SITE": "Budapest",
-        "CONTINENT": "Europe",
-        "PROVIDER": "Vodafone"
-    },
-    {
         "IP_HOST": "iperf3 -c 87.249.137.8",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "IR",
         "SITE": "Dublin",
@@ -712,7 +712,7 @@
     },
     {
         "IP_HOST": "iperf3 -c spd-icsrv.hostkey.com -p 5201",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-6",
         "GB_S": "10",
         "COUNTRY": "IS",
         "SITE": "Reykjavik",
@@ -721,7 +721,7 @@
     },
     {
         "IP_HOST": "iperf3 -c it1.speedtest.aruba.it",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "IT",
         "SITE": "Arezzo",
@@ -729,7 +729,7 @@
         "PROVIDER": "Aruba.it"
     },
     {
-        "IP_HOST": "iperf3 -c speed.itgate.net -p 5201-5202",
+        "IP_HOST": "iperf3 -c speed.itgate.net -p 5201-5209",
         "OPTIONS": "-R,-6",
         "GB_S": "",
         "COUNTRY": "IT",
@@ -739,7 +739,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 84.17.59.129",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "IT",
         "SITE": "Milan",
@@ -757,7 +757,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.lu.buyvm.net",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "",
         "COUNTRY": "LU",
         "SITE": "Bissen",
@@ -766,7 +766,7 @@
     },
     {
         "IP_HOST": "iperf3 -c iperf-ams-nl.eranium.net -p 5201-5210",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "100",
         "COUNTRY": "NL",
         "SITE": "Amsterdam",
@@ -793,7 +793,7 @@
     },
     {
         "IP_HOST": "iperf3 -c ams.speedtest.clouvider.net -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "NL",
         "SITE": "Amsterdam",
@@ -802,7 +802,7 @@
     },
     {
         "IP_HOST": "iperf3 -c ping-ams1.online.net -p 5200-5209",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "10",
         "COUNTRY": "NL",
         "SITE": "Amsterdam",
@@ -820,7 +820,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.ams1.novogara.net -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "20",
         "COUNTRY": "NL",
         "SITE": "Amsterdam",
@@ -828,8 +828,8 @@
         "PROVIDER": "Novogara"
     },
     {
-        "IP_HOST": "iperf3 -c lg.ams-nl.terrahost.com -p 9201-9240",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c lg.ams-nl.terrahost.com -p 9206-9240",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "",
         "COUNTRY": "NL",
         "SITE": "Amsterdam",
@@ -838,7 +838,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.102.218.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "NL",
         "SITE": "Amsterdam",
@@ -846,17 +846,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c speedtest.novoserve.com -p 5201-5206",
-        "OPTIONS": "-R,-6",
-        "GB_S": "40",
-        "COUNTRY": "NL",
-        "SITE": "Amsterdam",
-        "CONTINENT": "Europe",
-        "PROVIDER": "NovoServe"
-    },
-    {
-        "IP_HOST": "iperf3 -c speedtest.nl3.mirhosting.net -p 5201-5209",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c speedtest.nl3.mirhosting.net -p 5201-5210",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "40",
         "COUNTRY": "NL",
         "SITE": "Amsterdam",
@@ -864,16 +855,7 @@
         "PROVIDER": "Mirhosting"
     },
     {
-        "IP_HOST": "iperf3 -c lg-drn.liteserver.nl -p 5200-5240",
-        "OPTIONS": "-R",
-        "GB_S": "1",
-        "COUNTRY": "NL",
-        "SITE": "Dronten",
-        "CONTINENT": "Europe",
-        "PROVIDER": "LiteServer"
-    },
-    {
-        "IP_HOST": "iperf3 -c speedtest.nl1.mirhosting.net -p 5201-5209",
+        "IP_HOST": "iperf3 -c speedtest.nl1.mirhosting.net -p 5201-5210",
         "OPTIONS": "-R,-6",
         "GB_S": "40",
         "COUNTRY": "NL",
@@ -892,7 +874,7 @@
     },
     {
         "IP_HOST": "iperf3 -c lg.gigahost.no -p 9201-9240",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "100",
         "COUNTRY": "NO",
         "SITE": "Sandefjord",
@@ -901,7 +883,7 @@
     },
     {
         "IP_HOST": "iperf3 -c lg.terrahost.com -p 9200-9240",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "NO",
         "SITE": "Sandefjord",
@@ -909,17 +891,17 @@
         "PROVIDER": "Terrahost"
     },
     {
-        "IP_HOST": "iperf3 -c speedtest-w5-rnp.play.pl",
-        "OPTIONS": "-R",
+        "IP_HOST": "iperf3 -c speedtest3.itsjefen.no -p 5201-5204",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "",
-        "COUNTRY": "PL",
-        "SITE": "Warsaw",
+        "COUNTRY": "NO",
+        "SITE": "Trondheim",
         "CONTINENT": "Europe",
-        "PROVIDER": "PLAY"
+        "PROVIDER": "ITsjefen"
     },
     {
         "IP_HOST": "iperf3 -c 185.246.208.67",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "PL",
         "SITE": "Warsaw",
@@ -928,7 +910,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 109.61.94.65",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "PT",
         "SITE": "Lisbon",
@@ -937,7 +919,7 @@
     },
     {
         "IP_HOST": "iperf3 -c lisboa.speedtest.net.zon.pt -p 5201-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "PT",
         "SITE": "Lisbon",
@@ -946,7 +928,7 @@
     },
     {
         "IP_HOST": "iperf3 -c porto.speedtest.net.zon.pt -p 5201-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "PT",
         "SITE": "Porto",
@@ -954,8 +936,17 @@
         "PROVIDER": "NOS"
     },
     {
+        "IP_HOST": "iperf3 -c  speedtest.cloudity.net -p 5201-5205",
+        "OPTIONS": "-R,-6,-u",
+        "GB_S": "10",
+        "COUNTRY": "PT",
+        "SITE": "Viana do Castelo",
+        "CONTINENT": "Europe",
+        "PROVIDER": "Cloudity"
+    },
+    {
         "IP_HOST": "iperf3 -c 185.102.217.170",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "RO",
         "SITE": "Bucharest",
@@ -964,7 +955,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest1.sox.rs -p 9201-9240",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "RS",
         "SITE": "Belgrade",
@@ -981,8 +972,17 @@
         "PROVIDER": "Kamel Networks"
     },
     {
-        "IP_HOST": " iperf3 -c speedtest.cityhost.se -p 5201",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c speedtest.keff.org -p 9201-9240",
+        "OPTIONS": "-R,-u",
+        "GB_S": "",
+        "COUNTRY": "SE",
+        "SITE": "Stockholm",
+        "CONTINENT": "Europe",
+        "PROVIDER": "KeFF VPS"
+    },
+    {
+        "IP_HOST": " iperf3 -c speedtest.cityhost.se -p 5201-5206",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "100",
         "COUNTRY": "SE",
         "SITE": "Stockholm",
@@ -991,7 +991,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.ownit.se",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "1",
         "COUNTRY": "SE",
         "SITE": "Stockholm",
@@ -1000,7 +1000,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.76.9.135",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "SE",
         "SITE": "Stockholm",
@@ -1009,7 +1009,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 156.146.40.65",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "SK",
         "SITE": "Bratislava",
@@ -1018,7 +1018,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 37.19.218.65",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "UA",
         "SITE": "Kyiv",
@@ -1027,7 +1027,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.solver.net.ua",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "UA",
         "SITE": "Poltava",
@@ -1035,8 +1035,8 @@
         "PROVIDER": "Conbed"
     },
     {
-        "IP_HOST": "iperf3 -c speedtest.sao1.edgoo.net -p 9204-9240",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c speedtest.sao1.edgoo.net -p 9206-9240",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "",
         "COUNTRY": "BR",
         "SITE": "S\u00e3o Paulo",
@@ -1045,7 +1045,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 138.199.4.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "BR",
         "SITE": "S\u00e3o Paulo",
@@ -1053,17 +1053,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c sp11.wom.cl",
-        "OPTIONS": "",
-        "GB_S": "",
-        "COUNTRY": "CL",
-        "SITE": "Santiago",
-        "CONTINENT": "Latin America",
-        "PROVIDER": "WOM"
-    },
-    {
         "IP_HOST": "iperf3 -c 79.127.209.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "CL",
         "SITE": "Santiago",
@@ -1072,7 +1063,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 169.150.228.129",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "CO",
         "SITE": "Bogot\u00e1",
@@ -1081,7 +1072,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 152.204.128.194 -p 55200-55300",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "10",
         "COUNTRY": "CO",
         "SITE": "Bogot\u00e1",
@@ -1090,7 +1081,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 156.146.53.53",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "CR",
         "SITE": "San Jose",
@@ -1108,7 +1099,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 121.127.43.65",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "MX",
         "SITE": "Quer\u00e9taro",
@@ -1116,31 +1107,13 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c 200.2.166.166 -p 5201-5213",
-        "OPTIONS": "-R",
-        "GB_S": "",
-        "COUNTRY": "SR",
-        "SITE": "Paramaribo",
-        "CONTINENT": "Latin America",
-        "PROVIDER": "Telesur"
-    },
-    {
         "IP_HOST": "iperf3 -c bhs.proof.ovh.ca -p 5201-5210",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "CA",
         "SITE": "Beauharnois",
         "CONTINENT": "North America",
         "PROVIDER": "OVH"
-    },
-    {
-        "IP_HOST": "iperf3 -c speedtest-west.eastlink.ca",
-        "OPTIONS": "-R",
-        "GB_S": "10",
-        "COUNTRY": "CA",
-        "SITE": "Chestermere",
-        "CONTINENT": "North America",
-        "PROVIDER": "eastlink"
     },
     {
         "IP_HOST": "iperf3 -c speedtest.mtl2.ca.leaseweb.net -p 5201-5210",
@@ -1153,7 +1126,7 @@
     },
     {
         "IP_HOST": "iperf3 -c as21723.goco.ca -p 9200-9240",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "",
         "COUNTRY": "CA",
         "SITE": "Montr\u00e9al",
@@ -1162,7 +1135,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 138.199.57.129",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "CA",
         "SITE": "Toronto",
@@ -1171,7 +1144,7 @@
     },
     {
         "IP_HOST": "iperf3 -c ash.speedtest.clouvider.net -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "US",
         "SITE": "Ashburn",
@@ -1180,7 +1153,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 37.19.206.20",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Ashburn",
@@ -1189,7 +1162,7 @@
     },
     {
         "IP_HOST": "iperf3 -c atl.speedtest.clouvider.net -p 5200-5209",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "US",
         "SITE": "Atlanta",
@@ -1198,7 +1171,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.152.66.67",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Atlanta",
@@ -1207,7 +1180,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 109.61.86.65",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Boston",
@@ -1215,17 +1188,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c speedtest13.suddenlink.net",
-        "OPTIONS": "-R",
-        "GB_S": "10",
-        "COUNTRY": "US",
-        "SITE": "Charleston",
-        "CONTINENT": "North America",
-        "PROVIDER": "Optimum"
-    },
-    {
         "IP_HOST": "iperf3 -c speedtest15.suddenlink.net",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "10",
         "COUNTRY": "US",
         "SITE": "Charleston",
@@ -1243,7 +1207,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.93.1.65",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Chicago",
@@ -1261,7 +1225,7 @@
     },
     {
         "IP_HOST": "iperf3 -c dal.speedtest.clouvider.net -p 5200-5209",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "10",
         "COUNTRY": "US",
         "SITE": "Dallas",
@@ -1269,17 +1233,8 @@
         "PROVIDER": "Clouvider"
     },
     {
-        "IP_HOST": "iperf3 -c 89.187.164.1",
-        "OPTIONS": "-R",
-        "GB_S": "2x10",
-        "COUNTRY": "US",
-        "SITE": "Dallas",
-        "CONTINENT": "North America",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
         "IP_HOST": "iperf3 -c 84.17.63.68",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Denver",
@@ -1288,7 +1243,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 37.19.216.1",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Houston",
@@ -1297,7 +1252,7 @@
     },
     {
         "IP_HOST": "iperf3 -c la.speedtest.clouvider.net -p 5200-5209",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "10",
         "COUNTRY": "US",
         "SITE": "Los Angeles",
@@ -1315,21 +1270,12 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.152.67.2",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Los Angeles",
         "CONTINENT": "North America",
         "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP_HOST": "iperf3 -c speedtest.tds.net",
-        "OPTIONS": "-R",
-        "GB_S": "",
-        "COUNTRY": "US",
-        "SITE": "Madison",
-        "CONTINENT": "North America",
-        "PROVIDER": "TDS"
     },
     {
         "IP_HOST": "iperf3 -c speedtest.mia11.us.leaseweb.net -p 5201-5210",
@@ -1342,7 +1288,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 195.181.162.195",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "Miami",
@@ -1350,7 +1296,7 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c spd-uswb.hostkey.com -p 5201-5202",
+        "IP_HOST": "iperf3 -c spd-uswb.hostkey.com -p 5201-5209",
         "OPTIONS": "-R",
         "GB_S": "10",
         "COUNTRY": "US",
@@ -1360,7 +1306,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 185.59.223.8",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "US",
         "SITE": "New York",
@@ -1369,7 +1315,7 @@
     },
     {
         "IP_HOST": "iperf3 -c nyc.speedtest.clouvider.net -p 5200-5209",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "10",
         "COUNTRY": "US",
         "SITE": "New York City",
@@ -1378,7 +1324,7 @@
     },
     {
         "IP_HOST": "iperf3 -c speedtest.nyc1.us.leaseweb.net -p 5201-5210",
-        "OPTIONS": "-R,-6",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "10",
         "COUNTRY": "US",
         "SITE": "New York City",
@@ -1422,8 +1368,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c speedtest.is.cc -p 5201-5209",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c speedtest.is.cc -p 5201-5210",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "40",
         "COUNTRY": "US",
         "SITE": "Secaucus",
@@ -1440,7 +1386,7 @@
         "PROVIDER": "LeaseWeb"
     },
     {
-        "IP_HOST": "iperf3 -c 198.142.237.97 -p 5202",
+        "IP_HOST": "iperf3 -c 198.142.237.97 -p 5202-5203",
         "OPTIONS": "-R",
         "GB_S": "",
         "COUNTRY": "AU",
@@ -1459,7 +1405,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 143.244.63.144",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "AU",
         "SITE": "Sydney",
@@ -1467,8 +1413,8 @@
         "PROVIDER": "DATAPACKET"
     },
     {
-        "IP_HOST": "iperf3 -c syd.proof.ovh.net -p 5201-5210",
-        "OPTIONS": "-R,-6",
+        "IP_HOST": "iperf3 -c syd.proof.ovh.net -p 5207-5210",
+        "OPTIONS": "-R,-6,-u",
         "GB_S": "1",
         "COUNTRY": "AU",
         "SITE": "Sydney",
@@ -1485,7 +1431,7 @@
         "PROVIDER": "LeaseWeb"
     },
     {
-        "IP_HOST": "iperf3 -c 198.142.237.72 -p 5202",
+        "IP_HOST": "iperf3 -c 198.142.237.72 -p 5202-5203",
         "OPTIONS": "-R",
         "GB_S": "",
         "COUNTRY": "AU",
@@ -1513,7 +1459,7 @@
     },
     {
         "IP_HOST": "iperf3 -c 154.81.51.4 ",
-        "OPTIONS": "-R",
+        "OPTIONS": "-R,-u",
         "GB_S": "2x10",
         "COUNTRY": "PG",
         "SITE": "Port Moresby",
