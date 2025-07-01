@@ -25,7 +25,7 @@ if NETWORK_TEST_MECHANISM not in ["ping_only", "iperf"]:
     NETWORK_TEST_MECHANISM = "ping_only"
 logger.info(f"Network Test Mechanism set to: {NETWORK_TEST_MECHANISM}")
 
-IPERF_JSON_URL = "https://export.iperf3serverlist.net/json.php?action=download"
+IPERF_JSON_URL = "https://export.iperf3serverlist.net/listed_iperf3_servers.json"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(APP_DIR, "data")
 IPERF_FULL_LIST_PATH = os.path.join(DATA_DIR, "iperf3_export_servers.json")
@@ -128,47 +128,44 @@ class NetworkTester:
             return False
 
     def _parse_host_port(self, server_entry):
-        ip_host_string = server_entry.get("IP_HOST", "")
-        parts = ip_host_string.split()
-        host = None
+        host = server_entry.get("IP/HOST", "").strip()
+        port_str = server_entry.get("PORT", "").strip()
         port = DEFAULT_IPERF_PORT
-        port_str = None
-        if not ip_host_string:
+        if not host or not port_str:
+            logger.warning(f"Missing host or port in server entry: {server_entry}")
             return None, None
         try:
-            if "-c" in parts:
-                c_index = parts.index("-c")
-                host = parts[c_index + 1] if c_index + 1 < len(parts) else None
-            if not host:
-                return None, None
-            if "-p" in parts:
-                p_index = parts.index("-p")
-                port_str = parts[p_index + 1] if p_index + 1 < len(parts) else None
-            if port_str:
-                port_str = port_str.strip()
-                if "-" in port_str:
-                    base_port_str = port_str.split("-")[0].strip()
-                    port = (
-                        int(base_port_str)
-                        if base_port_str.isdigit()
-                        else DEFAULT_IPERF_PORT
-                    )
-                elif port_str.isdigit():
-                    port = int(port_str)
+            # Handle port range (e.g., "5201-5209" -> use 5201)
+            if "-" in port_str:
+                base_port_str = port_str.split("-")[0].strip()
+                if base_port_str.isdigit():
+                    port = int(base_port_str)
                 else:
                     logger.warning(
-                        f"Non-standard port format '{port_str}' in '{ip_host_string}', using default {DEFAULT_IPERF_PORT}."
+                        f"Non-standard port format '{port_str}' in '{host}', using default {DEFAULT_IPERF_PORT}."
                     )
                     port = DEFAULT_IPERF_PORT
+            elif port_str.isdigit():
+                port = int(port_str)
+            else:
+                logger.warning(
+                    f"Non-standard port format '{port_str}' in '{host}', using default {DEFAULT_IPERF_PORT}."
+                )
+                port = DEFAULT_IPERF_PORT
             if not (1 <= port <= 65535):
+                logger.warning(
+                    f"Extracted port '{port}' out of range in: {server_entry}, using default {DEFAULT_IPERF_PORT}."
+                )
                 port = DEFAULT_IPERF_PORT
             if not host or len(host) < 3:
                 logger.warning(
-                    f"Extracted host '{host}' seems invalid from: {ip_host_string}"
+                    f"Extracted host '{host}' seems invalid from: {server_entry}"
                 )
                 return None, None
-        except (ValueError, IndexError) as e:
-            logger.error(f"Error parsing IP_HOST string '{ip_host_string}': {e}")
+        except Exception as e:
+            logger.error(
+                f"Error parsing IP/HOST and PORT fields in '{server_entry}': {e}"
+            )
             return None, None
         return host, port
 
