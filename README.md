@@ -323,7 +323,7 @@ This method ensures you have the latest versions of SRT and GStreamer with all n
     cd /usr/local/src
     sudo git clone https://gitlab.freedesktop.org/gstreamer/gstreamer.git
     cd gstreamer
-    sudo meson build --prefix=/usr --libdir=/usr/lib64
+    sudo meson build --prefix=/usr --libdir=/usr/lib64 -Dgpl=enabled
     sudo ninja -C build
     sudo ninja -C build install
     sudo ldconfig
