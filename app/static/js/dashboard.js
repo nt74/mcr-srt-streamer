@@ -1,6 +1,9 @@
 // /opt/mcr-srt-streamer/app/static/js/dashboard.js
 
 $(document).ready(function () {
+  // --- Store active listener ports for overwrite confirmation ---
+  let activeListenerPorts = new Set();
+
   // System Info Update Logic
   function updateSystemInfo() {
     $.getJSON("/api/system/status", function (d) {
@@ -48,6 +51,9 @@ $(document).ready(function () {
     $.getJSON("/ui/active_streams_data", function (response) {
       const streams = response.data || {};
       const container = $("#active-streams-container");
+      // --- Reset active listener ports set before rebuilding cards ---
+      const newListenerPorts = new Set();
+
       container.empty(); // Clear previous cards
 
       if (!streams || Object.keys(streams).length === 0) {
@@ -353,24 +359,18 @@ $(document).ready(function () {
                     </div>
                 </div>
               </div>`;
-          console.log(
-            "Dashboard: Adding card for key:",
-            stream_key,
-            "Link:",
-            `/stream/${stream_key}`,
-          );
+          // Add listener port to the set for overwrite check
+          if (stream.mode === 'listener') {
+              newListenerPorts.add(String(stream.key));
+          }
           container.append(card);
         } else {
-          console.warn(
-            "Unknown stream type found in data:",
-            stream.stream_type,
-            stream,
-          );
-          container.append(
-            `<div class="col-12"><div class="alert alert-warning">Received unknown stream type: ${escapeHtml(stream.stream_type || "Undefined")}</div></div>`,
-          );
+          console.warn("Unknown stream type found in data:", stream.stream_type, stream);
+          container.append(`<div class="col-12"><div class="alert alert-warning">Received unknown stream type: ${escapeHtml(stream.stream_type || "Undefined")}</div></div>`);
         }
-      } // End for loop
+      }
+      // --- Update the global set of active listener ports ---
+      activeListenerPorts = newListenerPorts;
     })
       .fail(function (jqXHR, textStatus, errorThrown) {
         console.error(
@@ -402,6 +402,23 @@ $(document).ready(function () {
     // Update system info too
     updateSystemInfo();
   } // End updateActiveStreams function
+
+  // --- New Feature: Confirmation for Overwriting Listener Stream ---
+  // Handle submission of the listener form
+  $("#stream-form").submit(function (e) {
+    const selectedPort = $("#port").val(); // Get value from listener port dropdown
+    // Check if the selected port is in our set of active listener ports
+    if (activeListenerPorts.has(selectedPort)) {
+      if (
+        !confirm(
+          `A stream is already active on port ${selectedPort}. Do you want to stop the existing stream and start a new one?`
+        )
+      ) {
+        e.preventDefault(); // Stop the form submission if user clicks 'Cancel'
+      }
+    }
+    // If port is not in use, or if user confirms, the form will submit normally.
+  }); // End of stream-form submit handler
 
   // Helper function for escaping HTML (basic version)
   function escapeHtml(unsafe) {
@@ -485,3 +502,4 @@ $(document).ready(function () {
   // Apply results if redirected from network test
   applyNetworkTestResults();
 }); // End document.ready
+

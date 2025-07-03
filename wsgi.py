@@ -1,26 +1,28 @@
+# /opt/mcr-srt-streamer/wsgi.py
+
+# IMPORTANT: gevent monkey-patching must happen before any other modules are imported.
+# This makes standard libraries (like threading, socket) compatible with gevent.
+try:
+    import gevent.monkey
+
+    gevent.monkey.patch_all()
+    print("Gevent monkey-patch applied.")
+except ImportError:
+    print("Gevent not found, skipping monkey-patching. Functionality may be affected.")
+
+
 from app import app
-from waitress import serve
-import os
-import logging
 
-# Configure logging if not already done in app/__init__.py
-# logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s') # Example
-
-if __name__ == "__main__":
-    host = os.environ.get("HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", 5000))
-    threads = int(os.environ.get("THREADS", 4))
-    flask_env = os.environ.get("FLASK_ENV", "production")
-
-    # Use Flask's logger or configure Waitress logger
-    logger = logging.getLogger("waitress")
-    logger.setLevel(logging.INFO)
-
-    logger.info(
-        f"Starting Waitress WSGI Server for SRT Streamer Enhanced ({flask_env} mode)"
-    )
-    logger.info(f"Listening on http://{host}:{port}")
-    logger.info(f"Using {threads} worker threads.")
-
-    # Call waitress.serve
-    serve(app, host=host, port=port, threads=threads)
+# This code block will run when Gunicorn loads this file as a module.
+# It accesses the manager instances from the created 'app' object and
+# starts their non-blocking background loops in separate greenlets.
+# Since we use --workers 1, this will only happen once.
+if __name__ != "__main__":
+    if hasattr(app, "stream_manager") and hasattr(
+        app.stream_manager, "start_glib_loop"
+    ):
+        print("Starting StreamManager GLib loop...")
+        app.stream_manager.start_glib_loop()
+    if hasattr(app, "smpte_manager") and hasattr(app.smpte_manager, "start_glib_loop"):
+        print("Starting SMPTEManager GLib loop...")
+        app.smpte_manager.start_glib_loop()

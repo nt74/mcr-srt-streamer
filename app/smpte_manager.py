@@ -12,37 +12,38 @@ import os
 import re
 import socket
 import json
-from datetime import (
-    datetime,
-    timedelta,
-)
-import traceback  # For exception logging
+from datetime import datetime, timedelta
+import traceback
 
-# Assuming utils.py exists and provides get_network_interfaces
 try:
     from app.utils import get_network_interfaces
 except ImportError:
-    # Define a dummy function or handle the error appropriately if utils is optional
+
     def get_network_interfaces():
-        _logger = logging.getLogger(__name__)  # Define logger locally for fallback
+        _logger = logging.getLogger(__name__)
         _logger.warning("utils.get_network_interfaces not found, using basic fallback.")
         return {}
 
 
+# Import gevent for the non-blocking loop
+try:
+    import gevent
+except ImportError:
+    logging.getLogger(__name__).critical(
+        "gevent is not installed, which is required for the Gunicorn worker. Please install it."
+    )
+    gevent = None
+
 COLORBAR_URIS = {"720p50": "udp://224.1.1.1:5004", "1080i25": "udp://224.1.1.1:5005"}
-DEFAULT_MULTICAST_INTERFACE = "vlan2"  # Or choose a more common default if needed
+DEFAULT_MULTICAST_INTERFACE = "vlan2"
 
 
 class SMPTEManager:
-    # --- __init__ ---
     def __init__(self, main_stream_manager_ref=None):
         self.active_pairs = {}
-        self.lock = (
-            threading.RLock()
-        )  # Use RLock if methods might call each other under lock
+        self.lock = threading.RLock()
         self.logger = logging.getLogger(__name__)
-        self.main_stream_manager = main_stream_manager_ref  # Reference to StreamManager
-        # Configure logger if not already done by app
+        self.main_stream_manager = main_stream_manager_ref
         if not self.logger.hasHandlers():
             log_handler = logging.StreamHandler()
             log_formatter = logging.Formatter(
@@ -51,12 +52,42 @@ class SMPTEManager:
             log_handler.setFormatter(log_formatter)
             self.logger.addHandler(log_handler)
             self.logger.setLevel(logging.INFO)
-        # Get interfaces after logger is set up
         self.network_interfaces = self._get_interface_ips()
-        self.logger.info("SMPTEManager Initialized.")
+        self.logger.info(
+            "SMPTEManager Initialized and ready for non-blocking GLib loop."
+        )
+
+    def _run_glib_loop_non_blocking(self):
+        """
+        Runs in a gevent greenlet. It iteratively processes the GLib main context
+        without blocking, allowing the Gunicorn worker to remain responsive.
+        """
+        self.logger.info(
+            "Starting non-blocking GLib main context loop for SMPTEManager..."
+        )
+        context = GLib.MainContext.default()
+        while True:
+            try:
+                context.iteration(False)
+                gevent.sleep(0.01)  # Yield control
+            except Exception as e:
+                self.logger.error(
+                    f"Error in SMPTEManager's non-blocking GLib loop: {e}",
+                    exc_info=True,
+                )
+                gevent.sleep(1)
+
+    def start_glib_loop(self):
+        """Public method to be called from wsgi.py to start the non-blocking loop."""
+        if not gevent:
+            self.logger.critical(
+                "Cannot start GLib loop because gevent is not available."
+            )
+            return
+        self.logger.info("Spawning gevent greenlet for SMPTEManager's GLib loop.")
+        gevent.spawn(self._run_glib_loop_non_blocking)
 
     def _get_interface_ips(self):
-        """Gets a dictionary of active non-loopback interface names and their IPv4 addresses."""
         interfaces = {}
         try:
             import psutil
@@ -64,7 +95,6 @@ class SMPTEManager:
             addrs = psutil.net_if_addrs()
             stats = psutil.net_if_stats()
             for name, snics in addrs.items():
-                # Skip loopback, downed interfaces, and common virtual interfaces
                 if (
                     name == "lo"
                     or not stats.get(name)
@@ -75,7 +105,7 @@ class SMPTEManager:
                 for snic in snics:
                     if snic.family == socket.AF_INET:
                         interfaces[name] = snic.address
-                        break  # Take the first IPv4 address found
+                        break
         except ImportError:
             self.logger.warning(
                 "psutil not found, cannot automatically determine interface IPs."
@@ -86,7 +116,6 @@ class SMPTEManager:
         return interfaces
 
     def _extract_ip_from_socket_address(self, addr):
-        """Safely extracts IP address string from various Gio address types."""
         if addr is None:
             return None
         try:
@@ -95,8 +124,7 @@ class SMPTEManager:
                 return inet_addr.to_string() if inet_addr else None
             elif isinstance(addr, Gio.InetAddress):
                 return addr.to_string()
-            elif isinstance(addr, Gio.SocketAddress):  # More generic handling
-                # This native handling might be complex/platform specific, using simple string for now
+            elif isinstance(addr, Gio.SocketAddress):
                 return str(addr)
             else:
                 return str(addr)
@@ -107,7 +135,6 @@ class SMPTEManager:
             return str(addr)
 
     def _sanitize_for_json(self, obj):
-        """Recursively converts an object into JSON-serializable types."""
         if isinstance(obj, (str, int, float, bool, type(None))):
             return obj
         if isinstance(obj, datetime):
@@ -123,18 +150,13 @@ class SMPTEManager:
         if isinstance(obj, (GObject.GObject, GLib.Error)):
             return str(obj)
         try:
-            # Check if serializable directly - use default=str as a fallback in routes/endpoints
             return obj
         except TypeError:
-            # Fallback to string representation only if direct use fails
             return str(obj)
 
-    # --- Utility to format uptime ---
     def _format_uptime(self, seconds):
         try:
-            # Create a timedelta object, then format it. int() handles potential floats.
             td = timedelta(seconds=int(seconds))
-            # Format as HH:MM:SS (or D day(s) HH:MM:SS if longer)
             return str(td)
         except (ValueError, TypeError):
             self.logger.error(
@@ -143,8 +165,7 @@ class SMPTEManager:
             return "Error"
 
     def _build_srt_uri(self, leg_config, shared_config):
-        """Builds an SRT URI based on leg-specific and shared configuration."""
-        port = leg_config["port"]  # This is the Destination Port for caller mode
+        port = leg_config["port"]
         mode = leg_config["mode"]
         pair_id = shared_config.get("pair_id", "unknown")
         leg_num = leg_config.get("leg_num", "?")
@@ -182,34 +203,18 @@ class SMPTEManager:
         if mode == "listener":
             bind_address = interface_ip if interface_ip else "0.0.0.0"
             uri_base = f"srt://{bind_address}:{port}"
-            # Add localport binding for listener if required (usually port is sufficient)
-            # srt_params.append(f"localport={port}")
-            # if interface_ip:
-            #    srt_params.append(f"localaddress={interface_ip}")
-
         elif mode == "caller":
             target_addr = leg_config.get("target_address")
             if not target_addr:
                 raise ValueError(f"Missing target address for caller leg {leg_num}")
-            uri_base = f"srt://{target_addr}:{port}"  # Target address and port
+            uri_base = f"srt://{target_addr}:{port}"
 
-            # Bind local source IP if specified
             if interface_ip:
-                # self.logger.info(f"SMPTE Pair {pair_id} Leg {leg_num} (Caller): Binding source IP using localaddress={interface_ip}") # DEBUG REMOVED
                 srt_params.append(f"localaddress={interface_ip}")
-            # else: # DEBUG REMOVED
-            # self.logger.info(f"SMPTE Pair {pair_id} Leg {leg_num} (Caller): No specific output interface selected, using OS default source IP.") # DEBUG REMOVED
-
-            # Bind local source port to mirror the destination port
-            # WARNING: Ensure destination ports for Leg 1 and Leg 2 are different!
-            # self.logger.info(f"SMPTE Pair {pair_id} Leg {leg_num} (Caller): Binding source port using localport={port}") # DEBUG REMOVED
-            # srt_params.append(f"localport={port}")
 
         return f"{uri_base}?{'&'.join(srt_params)}"
 
-    # --- Helper for scheduling NULL state ---
     def _schedule_null_state(self, pipeline, pair_id):
-        """Schedules the set_state NULL call via GLib.idle_add."""
         if pipeline:
             self.logger.info(
                 f"Scheduling state change to NULL for pair {pair_id} via idle_add."
@@ -233,7 +238,7 @@ class SMPTEManager:
                         f"Exception during async set_state(NULL) for pair {k}: {e_state}",
                         exc_info=True,
                     )
-                return False  # Remove idle source
+                return False
 
             GLib.idle_add(
                 set_null_safe, pipeline, pair_id, priority=GLib.PRIORITY_DEFAULT
@@ -245,9 +250,7 @@ class SMPTEManager:
             )
             return False
 
-    # --- Helper for Resource Cleanup ---
     def _cleanup_smpte_pair_resources(self, pair_id, bus_obj):
-        """Helper function to perform cleanup after NULL state confirmed or on error."""
         self.logger.info(
             f"Performing final cleanup for SMPTE Pair {pair_id} (bus watch, etc.)."
         )
@@ -259,190 +262,109 @@ class SMPTEManager:
                 self.logger.warning(
                     f"Error removing signal watch for SMPTE Pair {pair_id}: {bus_e}"
                 )
-        # Add any other specific cleanup needed for the pair here (e.g., disconnecting other signals if added)
 
-    # --- Bus Message Handler ---
     def _on_smpte_bus_message(self, bus, message, pair_id):
-        """Handles messages from the SMPTE pipeline bus, including cleanup."""
         t = message.type
         msg_src = message.src
         pipeline_obj = None
         bus_obj = None
-        is_stopping = False  # Check stopping status from dict if needed
-        should_disconnect_handler = False  # Flag to disconnect bus watch
-        pair_info = None  # Need to fetch fresh info if key still exists
-
-        # Keep DEBUG level for bus handler entry
-        self.logger.debug(
-            f"SMPTE Bus handler invoked for key: {pair_id} (type: {type(pair_id)})"
-        )
+        is_stopping = False
+        should_disconnect_handler = False
+        pair_info = None
 
         try:
-            # === Top-level try-except to catch ANY unexpected error in the handler ===
-            try:
-                # --- Get current stream state safely ---
-                with self.lock:
-                    pair_info = self.active_pairs.get(pair_id)
-                    if pair_info:
-                        pipeline_obj = pair_info.get("pipeline")
-                        bus_obj = pair_info.get("bus")
-                        is_stopping = pair_info.get("stopping", False)
-                    else:
-                        self.logger.debug(
-                            f"Pair {pair_id} not in active_pairs, likely already stopped/popped."
-                        )
-                        if t == Gst.MessageType.STATE_CHANGED and isinstance(
-                            msg_src, Gst.Pipeline
-                        ):
-                            pipeline_obj = msg_src
+            with self.lock:
+                pair_info = self.active_pairs.get(pair_id)
+                if pair_info:
+                    pipeline_obj = pair_info.get("pipeline")
+                    bus_obj = pair_info.get("bus")
+                    is_stopping = pair_info.get("stopping", False)
+                elif t == Gst.MessageType.STATE_CHANGED and isinstance(
+                    msg_src, Gst.Pipeline
+                ):
+                    pipeline_obj = msg_src
 
-                pipeline_description = f"SMPTE Pair {pair_id}"
+            if not pipeline_obj:
+                self.logger.debug(
+                    f"Bus message for pair {pair_id} ignored: no active pipeline found."
+                )
+                return True
 
-                # --- Handle State Changes ---
-                if t == Gst.MessageType.STATE_CHANGED:
-                    if pipeline_obj and msg_src == pipeline_obj:
-                        old_state, new_state, _ = message.parse_state_changed()
-                        new_state_name = Gst.Element.state_get_name(new_state)
-                        old_state_name = Gst.Element.state_get_name(old_state)
-                        # Keep INFO level for state changes
+            src_name = msg_src.get_name() if hasattr(msg_src, "get_name") else "?"
+
+            if t == Gst.MessageType.STATE_CHANGED:
+                old_state, new_state, _ = message.parse_state_changed()
+                new_state_name = Gst.Element.state_get_name(new_state)
+                old_state_name = Gst.Element.state_get_name(old_state)
+                self.logger.info(
+                    f"BUS_MSG: SMPTE Pair {pair_id}, Element '{src_name}' state changed from {old_state_name} to {new_state_name}"
+                )
+
+                if msg_src == pipeline_obj:
+                    if int(new_state) == Gst.State.NULL:
                         self.logger.info(
-                            f"BUS_MSG: {pipeline_description} state changed from {old_state_name} to {new_state_name}"
+                            f"SMPTE Pair {pair_id} pipeline reached NULL state. Performing resource cleanup."
                         )
-
-                        if int(new_state) == Gst.State.NULL:
-                            self.logger.info(
-                                f"Pair {pair_id} NULL state message received. Performing resource cleanup."
-                            )
-                            try:
-                                if not bus_obj and pair_info:
-                                    bus_obj = pair_info.get("bus")
-                                self.logger.debug(
-                                    f"Pair {pair_id}: Calling _cleanup_smpte_pair_resources..."
-                                )
-                                self._cleanup_smpte_pair_resources(pair_id, bus_obj)
-                                self.logger.debug(
-                                    f"Pair {pair_id}: Returned from _cleanup_smpte_pair_resources."
-                                )
-                                should_disconnect_handler = True
-                                self.logger.info(
-                                    f"Pair {pair_id}: NULL state resource cleanup complete. Marking handler disconnect."
-                                )
-                            except Exception as cleanup_e:
-                                self.logger.error(
-                                    f"Pair {pair_id}: Exception during NULL state resource cleanup: {cleanup_e}",
-                                    exc_info=True,
-                                )
-                                should_disconnect_handler = False
-                        else:
-                            # Keep DEBUG level for non-NULL state changes check
-                            self.logger.debug(
-                                f"Pair {pair_id}: State change detected, but not NULL (int value: {int(new_state)}). Checking if update needed."
-                            )
-                            with self.lock:
-                                if pair_id in self.active_pairs:
-                                    if not is_stopping:
-                                        current_status = self.active_pairs[pair_id].get(
-                                            "status", "Unknown"
-                                        )
-                                        new_status_str = None
-                                        if new_state == Gst.State.PLAYING:
-                                            new_status_str = "Running"
-                                        elif new_state == Gst.State.PAUSED:
-                                            new_status_str = "Paused"
-                                        elif new_state == Gst.State.READY:
-                                            new_status_str = "Ready"
-                                        if (
-                                            new_status_str
-                                            and new_status_str != current_status
-                                            and not current_status.startswith("Error")
-                                        ):
-                                            # Keep INFO level for status updates
-                                            self.logger.info(
-                                                f"Pair {pair_id}: Updating status '{current_status}' to '{new_status_str}'"
-                                            )
-                                            self.active_pairs[pair_id][
-                                                "status"
-                                            ] = new_status_str
-                                    else:
-                                        self.logger.debug(
-                                            f"Pair {pair_id}: State change to {new_state_name} received but pair is stopping. Ignoring status update."
-                                        )
-                                else:
-                                    self.logger.debug(
-                                        f"Pair {pair_id}: State change to {new_state_name} received but pair already popped. Ignoring status update."
-                                    )
-                    elif pipeline_obj:
-                        self.logger.warning(
-                            f"Pair {pair_id}: STATE_CHANGED source ({msg_src}) != expected ({pipeline_obj}). Ignoring."
-                        )
+                        self._cleanup_smpte_pair_resources(pair_id, bus_obj)
+                        should_disconnect_handler = True
                     else:
-                        self.logger.debug(
-                            f"Pair {pair_id}: STATE_CHANGED received but pipeline_obj is None (likely already stopped/popped)."
-                        )
+                        with self.lock:
+                            if pair_id in self.active_pairs and not is_stopping:
+                                current_status = self.active_pairs[pair_id].get(
+                                    "status", "Unknown"
+                                )
+                                new_status_str = None
+                                if new_state == Gst.State.PLAYING:
+                                    new_status_str = "Running"
+                                elif new_state == Gst.State.PAUSED:
+                                    new_status_str = "Paused"
+                                elif new_state == Gst.State.READY:
+                                    new_status_str = "Ready"
 
-                # --- Handle Errors / EOS / Warnings (Keep these at appropriate levels) ---
-                elif t == Gst.MessageType.ERROR:
-                    err, debug = message.parse_error()
-                    src_name = (
-                        msg_src.get_name() if hasattr(msg_src, "get_name") else "?"
-                    )
-                    with self.lock:
-                        pair_info = self.active_pairs.get(pair_id)
-                        pipeline_description = (
-                            f"SMPTE Pair {pair_id} (details lost)"
-                            if not pair_info
-                            else f"SMPTE Pair {pair_id}"
-                        )
-                    self.logger.error(
-                        f"BUS_MSG: GStreamer error on {pipeline_description} from '{src_name}': {err.message}. Debug: {debug}"
-                    )  # Keep as ERROR
-                    # ... (rest of error handling logic remains) ...
-                elif t == Gst.MessageType.EOS:
-                    with self.lock:
-                        pair_info = self.active_pairs.get(pair_id)
-                        pipeline_description = (
-                            f"SMPTE Pair {pair_id} (details lost)"
-                            if not pair_info
-                            else f"SMPTE Pair {pair_id}"
-                        )
-                    self.logger.info(
-                        f"BUS_MSG: EOS received for {pipeline_description}. Initiating stop."
-                    )  # Keep as INFO
-                    # ... (rest of EOS handling logic remains) ...
-                elif t == Gst.MessageType.WARNING:
-                    warn, debug = message.parse_warning()
-                    src_name = (
-                        msg_src.get_name() if hasattr(msg_src, "get_name") else "?"
-                    )
-                    pipeline_description = f"SMPTE Pair {pair_id} (details lost)"
-                    with self.lock:
-                        pair_info = self.active_pairs.get(pair_id)
-                    if pair_info:
-                        pipeline_description = f"SMPTE Pair {pair_id}"
-                    self.logger.warning(
-                        f"BUS_MSG: GStreamer warning on {pipeline_description} from '{src_name}': {warn.message}. Debug: {debug}"
-                    )  # Keep as WARNING
+                                if new_status_str and new_status_str != current_status:
+                                    self.logger.info(
+                                        f"SMPTE Pair {pair_id}: Updating overall status to '{new_status_str}'"
+                                    )
+                                    self.active_pairs[pair_id][
+                                        "status"
+                                    ] = new_status_str
 
-            # === Catch ANY exception during message handling logic ===
-            except Exception as e:
+            elif t == Gst.MessageType.ERROR:
+                err, debug = message.parse_error()
                 self.logger.error(
-                    f"!!! Uncaught exception in SMPTE bus handler for pair {pair_id} !!!: {e}",
-                    exc_info=True,
-                )  # Keep as ERROR
-            # =======================================================
+                    f"BUS_MSG: GStreamer error on SMPTE Pair {pair_id} from '{src_name}': {err.message}. Debug: {debug}"
+                )
+                with self.lock:
+                    if pair_id in self.active_pairs and not is_stopping:
+                        self.active_pairs[pair_id]["status"] = "Error: " + err.message
+                        self.active_pairs[pair_id]["stopping"] = True
+                        self._schedule_null_state(pipeline_obj, pair_id)
 
-        finally:
-            # Keep DEBUG level for handler finish
-            self.logger.debug(
-                f"Pair {pair_id}: Bus handler finishing. Disconnecting handler: {should_disconnect_handler}"
+            elif t == Gst.MessageType.EOS:
+                self.logger.info(
+                    f"BUS_MSG: EOS received for SMPTE Pair {pair_id} from '{src_name}'. Initiating stop."
+                )
+                with self.lock:
+                    if pair_id in self.active_pairs and not is_stopping:
+                        self.active_pairs[pair_id]["status"] = "Ended (EOS)"
+                        self.active_pairs[pair_id]["stopping"] = True
+                        self._schedule_null_state(pipeline_obj, pair_id)
+
+            elif t == Gst.MessageType.WARNING:
+                warn, debug = message.parse_warning()
+                self.logger.warning(
+                    f"BUS_MSG: GStreamer warning on SMPTE Pair {pair_id} from '{src_name}': {warn.message}. Debug: {debug}"
+                )
+
+        except Exception as e:
+            self.logger.error(
+                f"!!! Uncaught exception in SMPTE bus handler for pair {pair_id} !!!: {e}",
+                exc_info=True,
             )
-            return not should_disconnect_handler
 
-    # --- start_smpte_stream_pair ---
+        return not should_disconnect_handler
+
     def start_smpte_stream_pair(self, config):
-        # Keep existing logs at INFO/WARNING/ERROR level
-        # Remove or reduce DEBUG level logs if desired
-        """Starts a new SMPTE 2022-7 stream pair pipeline."""
         pair_id = None
         pipeline = None
         pipeline_str = ""
@@ -489,7 +411,7 @@ class SMPTEManager:
                 )
                 if not mc_address or not mc_port:
                     raise ValueError("Missing multicast address or port.")
-                pipeline_input_str = f'udpsrc uri="udp://{mc_address}:{mc_port}" multicast-iface="{mc_interface}" buffer-size=20971520 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
+                pipeline_input_str = f'udpsrc uri="udp://{mc_address}:{mc_port}" multicast-iface="{mc_interface}" buffer-size=2097152 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
                 input_detail_log = f"udp://{mc_address}:{mc_port} via {mc_interface}"
             elif input_type.startswith("colorbar"):
                 resolution = config.get("colorbar_resolution")
@@ -507,7 +429,7 @@ class SMPTEManager:
                     self.logger.warning(
                         "Main Stream Manager ref not available, cannot ensure generator running."
                     )
-                pipeline_input_str = f'udpsrc uri="{udp_uri}" buffer-size=20971520 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
+                pipeline_input_str = f'udpsrc uri="{udp_uri}" buffer-size=2097152 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
                 input_detail_log = f"Colorbars {resolution.upper()}"
             else:
                 raise ValueError(f"Unsupported input_type: {input_type}")
@@ -559,7 +481,6 @@ class SMPTEManager:
 
             pipeline_str = f'{pipeline_input_str} ! queue ! {tsparse_part} ! queue ! {rtp_part} ! {tee_part} t. ! queue ! srtsink name="{sink_1_name}" uri="{uri_1}" {sink_common_params} t. ! queue ! srtsink name="{sink_2_name}" uri="{uri_2}" {sink_common_params}'
             pipeline_str = " ".join(pipeline_str.split())
-            # Keep pipeline string log at DEBUG level
             self.logger.debug(
                 f"Constructed SMPTE pipeline string {pair_id}: {pipeline_str}"
             )
@@ -655,10 +576,7 @@ class SMPTEManager:
                 self.active_pairs.pop(pair_id, None)
             return False, f"Unexpected start error: {str(e)}"
 
-    # --- stop_smpte_stream_pair ---
     def stop_smpte_stream_pair(self, pair_id_str, force_remove=False):
-        # Keep existing logs at INFO/WARNING/ERROR level
-        """Marks an SMPTE pair for stopping, pops it, and schedules the NULL state transition."""
         pipeline_to_schedule_stop = None
         pair_id = -1
         bus_obj_to_cleanup = None
@@ -698,9 +616,7 @@ class SMPTEManager:
                 )
                 pipeline_to_schedule_stop = pair_info.get("pipeline")
                 bus_obj_to_cleanup = pair_info.get("bus")
-                # pair_info["stopping"] = True # No need to set on dict we are popping
-                # pair_info["status"] = "Stopping..."
-                self.active_pairs.pop(pair_id, None)  # Pop the entry
+                self.active_pairs.pop(pair_id, None)
 
             if pipeline_to_schedule_stop and not force_remove:
                 if self._schedule_null_state(pipeline_to_schedule_stop, pair_id):
@@ -749,10 +665,7 @@ class SMPTEManager:
                     self._cleanup_smpte_pair_resources(pair_id, bus_obj_to_cleanup)
             return False, f"An unexpected error occurred stopping pair: {str(e)}"
 
-    # --- Stats and Debug methods ---
     def get_active_smpte_pairs(self):
-        # Keep logs at INFO/WARNING level
-        """Gets status information for all active SMPTE pairs."""
         pairs_data = {}
         now = time.time()
         with self.lock:
@@ -826,17 +739,10 @@ class SMPTEManager:
                             else None
                         ),
                     },
-                    # "pipeline_state": pipeline_state_name
                 }
         return self._sanitize_for_json(pairs_data)
 
-    # --- ROBUST Stats Parsing Function (Handles Caller/Listener, Checks Fields) ---
     def _extract_stats_from_gstruct(self, stats_struct):
-        """
-        Parses SRT statistics from Gst.Structure, handling listener & caller modes
-        by checking for field existence before access. An unconnected listener
-        will correctly return zero stats instead of an error.
-        """
         stats = {
             "timestamp": time.time(),
             "error": None,
@@ -863,60 +769,45 @@ class SMPTEManager:
             stats["error"] = "Stats structure is None"
             return stats
 
-        # Attempt to get raw string early, before potential parsing errors mask it
         try:
             stats["_raw_stats_string"] = stats_struct.to_string()
         except Exception as e_str:
             stats["_raw_stats_string"] = f"Error getting raw string: {e_str}"
             self.logger.warning(f"Failed to get raw stats string: {e_str}")
 
-        source_struct = None  # The structure containing the actual stat fields
+        source_struct = None
 
         try:
-            # Determine the source of truth for stats fields
-            # Check for 'callers' field (Listener mode)
             if stats_struct.has_field("callers"):
                 callers_array = stats_struct.get_value("callers")
-                # Check if array exists and has at least one caller connected
                 if (
                     callers_array
                     and hasattr(callers_array, "__len__")
                     and len(callers_array) > 0
                 ):
-                    nested_struct = callers_array[0]  # Get stats for the first caller
+                    nested_struct = callers_array[0]
                     if isinstance(nested_struct, Gst.Structure):
                         self.logger.debug(
                             "Parsing SMPTE stats from nested 'callers' structure (Listener - Connected)."
                         )
-                        source_struct = nested_struct  # Parse this nested struct
+                        source_struct = nested_struct
                     else:
-                        # This is unexpected if the array wasn't empty
                         stats["error"] = "Nested caller stats has unexpected type."
                         self.logger.warning(
                             f"SMPTE Stats: First element in 'callers' array was not a Gst.Structure. Type: {type(nested_struct).__name__}"
                         )
-                        # Don't set source_struct, parsing will yield zeros below
-
                 else:
-                    # Listener mode, but no active callers connected or empty array.
-                    # DO NOT set an error. Allow parsing to proceed, which will yield zeros.
                     self.logger.debug(
                         "SMPTE Stats: 'callers' array empty (Listener - Not Connected). Parsing yields zeros."
                     )
-                    source_struct = (
-                        None  # Ensure source_struct is None so parsing yields zeros
-                    )
-
+                    source_struct = None
             else:
-                # Assume Caller mode or maybe a different Listener format - use top-level structure
                 self.logger.debug(
                     "Parsing SMPTE stats from top-level structure (Caller?)."
                 )
-                source_struct = stats_struct  # Use the main structure itself
+                source_struct = stats_struct
 
-            # Parse fields if we determined a valid source structure, otherwise fields remain 0
             if source_struct:
-                # Use Gst.Structure.get_value which handles missing fields returning None
                 stats["packets_sent"] = source_struct.get_value("packets-sent") or 0
                 stats["packets_sent_lost"] = (
                     source_struct.get_value("packets-sent-lost") or 0
@@ -957,7 +848,6 @@ class SMPTEManager:
                     source_struct.get_value("bytes-sent-dropped") or 0
                 )
 
-                # --- Calculate Percentages Safely ---
                 pkts_sent = stats["packets_sent"]
                 pkts_lost = stats["packets_sent_lost"]
                 pkts_retrans = stats["packets_retransmitted"]
@@ -968,25 +858,17 @@ class SMPTEManager:
                         stats["retransmitted_pkts_percent"] = (
                             pkts_retrans / pkts_sent
                         ) * 100
-                # Note: No need to set percentages to 0.0 here, default is already 0.0
-
-                # Clear any potential residual error flags ONLY if parsing was successful
                 stats["error"] = None
-
-            # else: If source_struct is None (e.g., unconnected listener), stats fields remain default 0, error remains default None.
 
         except Exception as e:
             self.logger.error(
                 f"Unexpected error during SMPTE SRT stats parsing: {e}", exc_info=True
             )
-            stats["error"] = (
-                f"Internal parsing error: {str(e)}"  # Set error on general exception
-            )
+            stats["error"] = f"Internal parsing error: {str(e)}"
 
         return stats
 
     def get_smpte_pair_statistics(self, pair_id_str):
-        # Removed specific debug logs, keeping essential warnings/errors
         stats_dict = {
             "pair_id": pair_id_str,
             "leg1_stats": None,
@@ -999,7 +881,6 @@ class SMPTEManager:
         pair_id = -1
         leg_errors = False
         now = time.time()
-        # self.logger.info(f"STATS ({pair_id_str}): Starting statistics retrieval.") # DEBUG REMOVED
 
         try:
             pair_id = int(pair_id_str)
@@ -1012,18 +893,15 @@ class SMPTEManager:
             if not pair_info:
                 stats_dict["error"] = f"Pair ID {pair_id_str} not found or inactive."
                 stats_dict["status"] = "Not Found"
-                # self.logger.warning(f"STATS ({pair_id_str}): Pair info not found.") # DEBUG REMOVED
                 return stats_dict
 
             stats_dict["status"] = pair_info.get("status", "Unknown")
-            # self.logger.info(f"STATS ({pair_id_str}): Pair status is '{stats_dict['status']}'.") # DEBUG REMOVED
 
             pipeline = pair_info.get("pipeline")
             if not pipeline:
                 stats_dict["error"] = (
                     f"Pipeline not found for SMPTE Pair {pair_id_str} (likely stopped or failed)."
                 )
-                # self.logger.warning(f"STATS ({pair_id_str}): Pipeline object missing in pair_info.") # DEBUG REMOVED
                 return stats_dict
 
             pipeline_ready_for_stats = False
@@ -1033,13 +911,11 @@ class SMPTEManager:
                 pipeline_state_name = Gst.Element.state_get_name(current_state)
                 if current_state >= Gst.State.PAUSED:
                     pipeline_ready_for_stats = True
-                    # self.logger.info(f"STATS ({pair_id_str}): Pipeline state is {pipeline_state_name}, ready for stats.") # DEBUG REMOVED
                 else:
                     stats_dict["error"] = (
                         f"Pipeline state not ready ({pipeline_state_name})"
                     )
                     leg_errors = True
-                    # self.logger.warning(f"STATS ({pair_id_str}): Pipeline state is {pipeline_state_name}, NOT ready.") # DEBUG REMOVED
             except Exception as state_e:
                 pipeline_state_name = f"Error ({type(state_e).__name__})"
                 self.logger.warning(
@@ -1056,23 +932,19 @@ class SMPTEManager:
                     leg_stat_data["error"] = stats_dict.get(
                         "error", "Pipeline not ready"
                     )
-                    # self.logger.warning(f"STATS ({pair_id_str}) Leg {leg_num}: Skipping stats, pipeline not ready ({pipeline_state_name}).") # DEBUG REMOVED
                     return leg_stat_data, True
 
-                # self.logger.info(f"STATS ({pair_id_str}) Leg {leg_num}: Attempting to find sink '{sink_name}'.") # DEBUG REMOVED
                 sink = pipeline.get_by_name(sink_name)
                 if sink:
-                    # self.logger.info(f"STATS ({pair_id_str}) Leg {leg_num}: Sink '{sink_name}' found. Getting 'stats' property.") # DEBUG REMOVED
                     stats_struct = None
                     try:
                         stats_struct = sink.get_property("stats")
                         if stats_struct:
-                            # self.logger.info(f"STATS ({pair_id_str}) Leg {leg_num}: 'stats' property retrieved successfully.") # DEBUG REMOVED
                             try:
                                 struct_string = stats_struct.to_string()
                                 self.logger.debug(
                                     f"STATS ({pair_id_str}) Leg {leg_num}: Raw stats structure: {struct_string}"
-                                )  # Keep at DEBUG
+                                )
                             except Exception as to_string_e:
                                 self.logger.warning(
                                     f"STATS ({pair_id_str}) Leg {leg_num}: Failed to convert stats_struct to string: {to_string_e}"
@@ -1082,15 +954,12 @@ class SMPTEManager:
                                 stats_struct
                             )
                             if parsed_stats.get("error"):
-                                # self.logger.warning(f"STATS ({pair_id_str}) Leg {leg_num}: Parsing failed. Error: {parsed_stats['error']}") # DEBUG REMOVED
                                 leg_stat_data = parsed_stats
                                 return leg_stat_data, True
                             else:
-                                # self.logger.info(f"STATS ({pair_id_str}) Leg {leg_num}: Parsing successful.") # DEBUG REMOVED
                                 return parsed_stats, False
                         else:
                             leg_stat_data["error"] = "Stats structure None from sink"
-                            # self.logger.warning(f"STATS ({pair_id_str}) Leg {leg_num}: sink.get_property('stats') returned None.") # DEBUG REMOVED
                             return leg_stat_data, True
                     except Exception as e:
                         self.logger.error(
@@ -1108,14 +977,12 @@ class SMPTEManager:
                     )
                     return leg_stat_data, True
 
-            # self.logger.info(f"STATS ({pair_id_str}): Getting stats for Leg 1.") # DEBUG REMOVED
             leg1_stats_result, leg1_had_error = get_stats_from_sink(
                 f"srtsink_smpte_{pair_id}_1", 1
             )
             stats_dict["leg1_stats"] = leg1_stats_result
             leg_errors = leg_errors or leg1_had_error
 
-            # self.logger.info(f"STATS ({pair_id_str}): Getting stats for Leg 2.") # DEBUG REMOVED
             leg2_stats_result, leg2_had_error = get_stats_from_sink(
                 f"srtsink_smpte_{pair_id}_2", 2
             )
@@ -1124,9 +991,6 @@ class SMPTEManager:
 
             if leg_errors and not stats_dict.get("error"):
                 stats_dict["error"] = "Failed to get valid stats for one or both legs."
-                # self.logger.warning(f"STATS ({pair_id_str}): Setting top-level error due to leg failures.") # DEBUG REMOVED
-
-            # self.logger.info(f"STATS ({pair_id_str}): Finished statistics retrieval.") # DEBUG REMOVED
 
         except ValueError as e:
             stats_dict["error"] = f"Invalid Pair ID format: {str(e)}"
@@ -1152,7 +1016,6 @@ class SMPTEManager:
         return self._sanitize_for_json(stats_dict)
 
     def get_smpte_pair_debug_info(self, pair_id_str):
-        # Keep existing logs at INFO/WARNING/ERROR level
         debug_info = {"error": None}
         pipeline = None
         pair_info = None
@@ -1169,14 +1032,12 @@ class SMPTEManager:
                 return {"error": f"SMPTE Pair {pair_id} not found (likely stopped)."}
 
             pipeline = pair_info.get("pipeline")
-            # Ensure config is copied safely
             config_data = pair_info.get("config", {})
             cfg_copy = config_data.copy() if isinstance(config_data, dict) else {}
 
             status = pair_info.get("status", "Unknown")
             start_time = pair_info.get("start_time")
             input_detail = pair_info.get("input_detail", "N/A")
-            # Ensure history is copied safely
             history_data = pair_info.get("connection_history", [])
             hist_copy = history_data.copy() if isinstance(history_data, list) else []
 
@@ -1208,7 +1069,6 @@ class SMPTEManager:
                 debug_info["parsed_stats_leg1"] = {}
                 debug_info["parsed_stats_leg2"] = {}
             else:
-                # Ensure stats_data is a dict before accessing keys
                 if isinstance(stats_data, dict):
                     leg1_stats = stats_data.get("leg1_stats")
                     leg2_stats = stats_data.get("leg2_stats")
@@ -1219,7 +1079,6 @@ class SMPTEManager:
                         leg2_stats if isinstance(leg2_stats, dict) else {}
                     )
 
-                    # Extract raw strings if stats were successfully parsed
                     if isinstance(leg1_stats, dict):
                         debug_info["raw_stats_leg1"] = leg1_stats.get(
                             "_raw_stats_string"
@@ -1228,7 +1087,7 @@ class SMPTEManager:
                         debug_info["raw_stats_leg2"] = leg2_stats.get(
                             "_raw_stats_string"
                         )
-                else:  # Should not happen if get_smpte_pair_statistics returns correctly
+                else:
                     debug_info["parsed_stats_leg1"] = {}
                     debug_info["parsed_stats_leg2"] = {}
 
@@ -1236,16 +1095,11 @@ class SMPTEManager:
             debug_info = {"error": f"Invalid Pair ID: {str(e)}"}
         except Exception as e:
             debug_info = {"error": f"Unexpected error getting debug info: {e}"}
-            self.logger.error(
-                f"Err get debug {pair_id_str}: {e}", exc_info=True
-            )  # Keep this error
+            self.logger.error(f"Err get debug {pair_id_str}: {e}", exc_info=True)
 
-        # Use default=str in final sanitize call for robustness
         return self._sanitize_for_json(debug_info)
 
-    # --- shutdown ---
     def shutdown(self):
-        # Keep existing logs
         self.logger.info("Shutting down SMPTEManager...")
         pair_keys_to_stop = []
         gen_keys_to_stop = []

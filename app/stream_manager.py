@@ -13,9 +13,18 @@ import time
 import re
 import json
 from collections import defaultdict
-import traceback  # Import traceback for detailed exception logging
-from datetime import datetime, timedelta  # Import timedelta for uptime formatting
-import socket  # Needed for IP address family check
+import traceback
+from datetime import datetime, timedelta
+import socket
+
+# Import gevent for the non-blocking loop
+try:
+    import gevent
+except ImportError:
+    logging.getLogger(__name__).critical(
+        "gevent is not installed, which is required for the Gunicorn worker. Please install it."
+    )
+    gevent = None
 
 # Initialize GStreamer
 Gst.init(None)
@@ -42,33 +51,44 @@ class StreamManager:
             self.logger.addHandler(log_handler)
             self.logger.setLevel(logging.INFO)
 
-        self.logger.info("Initializing GLib main loop and starting thread...")
-        self.mainloop = GLib.MainLoop()
-        self.thread = threading.Thread(target=self._run_mainloop, daemon=True)
-        self.thread.start()
-        self.logger.info("GLib main loop thread started.")
-
-        self.logger.info(f"StreamManager initialized with media folder: {media_folder}")
+        self.logger.info(
+            "StreamManager initialized and ready for non-blocking GLib loop."
+        )
+        self.logger.info(f"Media folder set to: {media_folder}")
         try:
             self.logger.info(f"GStreamer version: {Gst.version_string()}")
         except Exception as e:
             self.logger.error(f"Could not get GStreamer version string: {e}")
 
-    # --- Main Loop Runner ---
-    def _run_mainloop(self):
-        self.logger.info("GLib main loop thread entering run()...")
-        try:
-            self.mainloop.run()
-            self.logger.info("GLib main loop thread exited run().")
-        except Exception as e:
-            self.logger.error(f"Exception in GLib main loop thread: {e}", exc_info=True)
-        finally:
-            if self.mainloop and self.mainloop.is_running():
-                self.logger.warning(
-                    "GLib main loop context still running after thread exit."
+    def _run_glib_loop_non_blocking(self):
+        """
+        Runs in a gevent greenlet. It iteratively processes the GLib main context
+        without blocking, allowing the Gunicorn worker to remain responsive.
+        """
+        self.logger.info(
+            "Starting non-blocking GLib main context loop for StreamManager..."
+        )
+        context = GLib.MainContext.default()
+        while True:
+            try:
+                context.iteration(False)
+                gevent.sleep(0.01)  # Yield control to other greenlets
+            except Exception as e:
+                self.logger.error(
+                    f"Error in StreamManager's non-blocking GLib loop: {e}",
+                    exc_info=True,
                 )
-            else:
-                self.logger.info("GLib main loop thread finished cleanly.")
+                gevent.sleep(1)
+
+    def start_glib_loop(self):
+        """Public method called from wsgi.py to start the non-blocking loop."""
+        if not gevent:
+            self.logger.critical(
+                "Cannot start GLib loop because gevent is not available."
+            )
+            return
+        self.logger.info("Spawning gevent greenlet for StreamManager's GLib loop.")
+        gevent.spawn(self._run_glib_loop_non_blocking)
 
     # --- Validation Methods ---
     def _validate_listener_port(self, port):
@@ -98,24 +118,20 @@ class StreamManager:
         if isinstance(obj, (str, int, float, bool, type(None))):
             return obj
         if isinstance(obj, timedelta):
-            # Return total seconds for JSON compatibility
             return obj.total_seconds()
         if isinstance(obj, datetime):
             return obj.isoformat()
         if isinstance(obj, (list, tuple)):
             return [self._sanitize_for_json(item) for item in obj]
         if isinstance(obj, dict):
-            # Ensure keys are strings and values are sanitized
             return {str(k): self._sanitize_for_json(v) for k, v in obj.items()}
         if isinstance(obj, (Gio.SocketAddress, Gio.InetAddress, Gio.InetSocketAddress)):
             return self._extract_ip_from_socket_address(obj)
         if isinstance(obj, (GObject.GObject, GLib.Error)):
             return str(obj)
         try:
-            # Check if serializable directly, use default=str in endpoint jsonify instead
             return obj
         except TypeError:
-            # Fallback to string representation only if direct use fails
             return str(obj)
 
     def _extract_ip_from_socket_address(self, addr):
@@ -127,7 +143,7 @@ class StreamManager:
                 return inet_addr.to_string() if inet_addr else None
             elif isinstance(addr, Gio.InetAddress):
                 return addr.to_string()
-            elif isinstance(addr, Gio.SocketAddress):  # More generic handling
+            elif isinstance(addr, Gio.SocketAddress):
                 return str(addr)
             else:
                 return str(addr)
@@ -137,7 +153,6 @@ class StreamManager:
             )
             return str(addr)
 
-    # --- Utility to format uptime ---
     def _format_uptime(self, seconds):
         try:
             td = timedelta(seconds=int(seconds))
@@ -148,7 +163,6 @@ class StreamManager:
             )
             return "Error"
 
-    # --- Helper for Resource Cleanup ---
     def _cleanup_stream_resources(self, key, bus_obj):
         self.logger.info(
             f"Performing final cleanup for stream {key} (bus watch, etc.)."
@@ -162,7 +176,6 @@ class StreamManager:
                     f"Error removing signal watch for stream {key}: {bus_e}"
                 )
 
-    # --- Helper to schedule NULL state ---
     def _schedule_null_state(self, pipeline, key):
         if pipeline:
             self.logger.info(
@@ -187,7 +200,7 @@ class StreamManager:
                         f"Exception during async set_state(NULL) for stream {k}: {e_state}",
                         exc_info=True,
                     )
-                return False  # Remove idle source
+                return False
 
             GLib.idle_add(set_null_safe, pipeline, key, priority=GLib.PRIORITY_DEFAULT)
             return True
@@ -197,9 +210,7 @@ class StreamManager:
             )
             return False
 
-    # --- Bus Message Handler (Handles NULL state after pop) ---
     def _on_bus_message(self, bus, message, key):
-        """Handles messages from the standard stream pipeline bus."""
         t = message.type
         msg_src = message.src
         pipeline_obj = None
@@ -207,239 +218,103 @@ class StreamManager:
         is_stopping = False
         should_disconnect_handler = False
         stream_info = None
-        self.logger.debug(
-            f"Bus handler invoked for key: {key} (type: {type(key)})"
-        )  # Keep DEBUG
+
         try:
-            try:
-                with self.lock:
-                    stream_info = self.active_streams.get(key)
-                    if stream_info:
-                        pipeline_obj = stream_info.get("pipeline")
-                        bus_obj = stream_info.get("bus")
-                        is_stopping = stream_info.get("stopping", False)
-                    else:
-                        self.logger.debug(
-                            f"Stream {key} not in active_streams, likely already stopped/popped."
-                        )  # Keep DEBUG
-                        if t == Gst.MessageType.STATE_CHANGED and isinstance(
-                            msg_src, Gst.Pipeline
-                        ):
-                            pipeline_obj = msg_src
+            with self.lock:
+                stream_info = self.active_streams.get(key)
+                if stream_info:
+                    pipeline_obj = stream_info.get("pipeline")
+                    bus_obj = stream_info.get("bus")
+                    is_stopping = stream_info.get("stopping", False)
+                elif t == Gst.MessageType.STATE_CHANGED and isinstance(
+                    msg_src, Gst.Pipeline
+                ):
+                    pipeline_obj = msg_src
 
-                if t == Gst.MessageType.STATE_CHANGED:
-                    if pipeline_obj and msg_src == pipeline_obj:
-                        old_state, new_state, _ = message.parse_state_changed()
-                        new_state_name = Gst.Element.state_get_name(new_state)
-                        old_state_name = Gst.Element.state_get_name(old_state)
+            if not pipeline_obj:
+                self.logger.debug(
+                    f"Bus message for {key} ignored: no active pipeline found."
+                )
+                return True
+
+            src_name = msg_src.get_name() if hasattr(msg_src, "get_name") else "?"
+
+            if t == Gst.MessageType.STATE_CHANGED:
+                old_state, new_state, _ = message.parse_state_changed()
+                new_state_name = Gst.Element.state_get_name(new_state)
+                old_state_name = Gst.Element.state_get_name(old_state)
+                self.logger.info(
+                    f"BUS_MSG: Stream {key}, Element '{src_name}' state changed from {old_state_name} to {new_state_name}"
+                )
+
+                # Only act on state changes from the pipeline itself
+                if msg_src == pipeline_obj:
+                    if int(new_state) == Gst.State.NULL:
                         self.logger.info(
-                            f"BUS_MSG: Stream {key} state changed from {old_state_name} to {new_state_name}"
-                        )  # Keep INFO
-
-                        if int(new_state) == Gst.State.NULL:
-                            self.logger.info(
-                                f"Stream {key} NULL state message received. Performing resource cleanup."
-                            )  # Keep INFO
-                            try:
-                                if not bus_obj and stream_info:
-                                    bus_obj = stream_info.get("bus")
-                                self.logger.debug(
-                                    f"Stream {key}: Calling _cleanup_stream_resources..."
-                                )  # Keep DEBUG
-                                self._cleanup_stream_resources(key, bus_obj)
-                                self.logger.debug(
-                                    f"Stream {key}: Returned from _cleanup_stream_resources."
-                                )  # Keep DEBUG
-                                should_disconnect_handler = True
-                                self.logger.info(
-                                    f"Stream {key}: NULL state resource cleanup complete. Marking handler disconnect."
-                                )  # Keep INFO
-                            except Exception as cleanup_e:
-                                self.logger.error(
-                                    f"Stream {key}: Exception during NULL state resource cleanup: {cleanup_e}",
-                                    exc_info=True,
-                                )  # Keep ERROR
-                                should_disconnect_handler = False
-                        else:
-                            self.logger.debug(
-                                f"Stream {key}: State change detected ({old_state_name}->{new_state_name}). Checking if update needed."
-                            )  # Keep DEBUG
-                            with self.lock:
-                                if key in self.active_streams:
-                                    if not is_stopping:
-                                        current_status = self.active_streams[key].get(
-                                            "connection_status", "Unknown"
-                                        )
-                                        new_status_str = None
-                                        mode = self.active_streams[key].get("mode", "?")
-                                        if new_state == Gst.State.PLAYING:
-                                            # Change status based on context (Caller connecting vs general running)
-                                            if (
-                                                mode == "caller"
-                                                and current_status == "Connecting..."
-                                            ):
-                                                new_status_str = "Connected"  # Or keep as "Running" if preferred
-                                            elif current_status not in [
-                                                "Running",
-                                                "Connected",
-                                            ]:  # Avoid flapping if already Running/Connected
-                                                new_status_str = "Running"
-                                        elif new_state == Gst.State.PAUSED:
-                                            new_status_str = "Paused"
-                                        elif new_state == Gst.State.READY:
-                                            new_status_str = "Ready"
-
-                                        if (
-                                            new_status_str
-                                            and new_status_str != current_status
-                                            and not current_status.startswith("Error")
-                                        ):
-                                            self.logger.info(
-                                                f"Stream {key}: Updating status '{current_status}' to '{new_status_str}'"
-                                            )  # Keep INFO
-                                            self.active_streams[key][
-                                                "connection_status"
-                                            ] = new_status_str
-                                    else:
-                                        self.logger.debug(
-                                            f"Stream {key}: State change to {new_state_name} received but stream is stopping. Ignoring status update."
-                                        )  # Keep DEBUG
-                                else:
-                                    self.logger.debug(
-                                        f"Stream {key}: State change to {new_state_name} received but stream already popped. Ignoring status update."
-                                    )  # Keep DEBUG
-                    elif pipeline_obj:
-                        self.logger.warning(
-                            f"Stream {key}: STATE_CHANGED source ({msg_src}) != expected ({pipeline_obj}). Ignoring."
-                        )  # Keep WARNING
+                            f"Stream {key} pipeline reached NULL state. Performing resource cleanup."
+                        )
+                        self._cleanup_stream_resources(key, bus_obj)
+                        should_disconnect_handler = True
                     else:
-                        self.logger.debug(
-                            f"Stream {key}: STATE_CHANGED received but pipeline_obj is None (likely already stopped/popped)."
-                        )  # Keep DEBUG
-
-                elif t == Gst.MessageType.ERROR:
-                    err, debug = message.parse_error()
-                    src_name = (
-                        msg_src.get_name() if hasattr(msg_src, "get_name") else "?"
-                    )
-                    pipeline_description = f"stream {key} (details maybe lost)"
-                    with self.lock:
-                        stream_info = self.active_streams.get(key)
-                    if stream_info:
-                        config_dict = stream_info.get("config", {})
-                        mode = stream_info.get("mode", "?")
-                        input_type = config_dict.get("input_type", "?")
-                        rtp_encap = config_dict.get("rtp_encapsulation", False)
-                        pipeline_description = f"stream {key} ({mode}, input:{input_type}{', RTP' if rtp_encap else ''})"
-                    self.logger.error(
-                        f"BUS_MSG: GStreamer error on {pipeline_description} from '{src_name}': {err.message}. Debug: {debug}"
-                    )  # Keep ERROR
-                    # ... (rest of error handling logic remains the same) ...
-                    with self.lock:
-                        if key in self.active_streams and not self.active_streams[
-                            key
-                        ].get("stopping", False):
-                            self.active_streams[key]["connection_status"] = (
-                                "Error: " + err.message
-                            )
-                            self.active_streams[key]["stopping"] = True
-                            self.logger.info(
-                                f"Scheduling NULL state for {key} due to error."
-                            )
-                            current_pipeline = self.active_streams[key].get("pipeline")
-                            if current_pipeline:
-                                GLib.idle_add(
-                                    self._schedule_null_state, current_pipeline, key
+                        with self.lock:
+                            if key in self.active_streams and not is_stopping:
+                                current_status = self.active_streams[key].get(
+                                    "connection_status", "Unknown"
                                 )
-                            else:
-                                self.logger.error(
-                                    f"Cannot schedule NULL state for {key} on error: pipeline object missing."
-                                )
-                        elif key in self.active_streams:
-                            self.logger.info(
-                                f"Bus error for stream {key}, but already stopping."
-                            )
-                        else:
-                            self.logger.warning(
-                                f"Bus error for stream {key}, but no longer active."
-                            )
+                                new_status_str = None
+                                if new_state == Gst.State.PLAYING:
+                                    new_status_str = "Running"
+                                elif new_state == Gst.State.PAUSED:
+                                    new_status_str = "Paused"
+                                elif new_state == Gst.State.READY:
+                                    new_status_str = "Ready"
 
-                elif t == Gst.MessageType.EOS:
-                    pipeline_description = f"stream {key} (details maybe lost)"
-                    with self.lock:
-                        stream_info = self.active_streams.get(key)
-                    if stream_info:
-                        config_dict = stream_info.get("config", {})
-                        mode = stream_info.get("mode", "?")
-                        input_type = config_dict.get("input_type", "?")
-                        rtp_encap = config_dict.get("rtp_encapsulation", False)
-                        pipeline_description = f"stream {key} ({mode}, input:{input_type}{', RTP' if rtp_encap else ''})"
-                    self.logger.info(
-                        f"BUS_MSG: EOS received for {pipeline_description}. Initiating stop."
-                    )  # Keep INFO
-                    # ... (rest of EOS handling logic remains the same) ...
-                    with self.lock:
-                        if key in self.active_streams and not self.active_streams[
-                            key
-                        ].get("stopping", False):
-                            self.active_streams[key][
-                                "connection_status"
-                            ] = "Ended (EOS)"
-                            self.active_streams[key]["stopping"] = True
-                            self.logger.info(
-                                f"Scheduling NULL state for stream {key} due to EOS."
-                            )
-                            current_pipeline = self.active_streams[key].get("pipeline")
-                            if current_pipeline:
-                                GLib.idle_add(
-                                    self._schedule_null_state, current_pipeline, key
-                                )
-                            else:
-                                self.logger.error(
-                                    f"Cannot schedule NULL state for {key} on EOS: pipeline object missing."
-                                )
-                        elif key in self.active_streams:
-                            self.logger.info(
-                                f"Bus EOS for stream {key}, but already stopping."
-                            )
-                        else:
-                            self.logger.warning(
-                                f"Bus EOS for stream {key}, but no longer active."
-                            )
+                                if new_status_str and new_status_str != current_status:
+                                    self.logger.info(
+                                        f"Stream {key}: Updating overall status to '{new_status_str}'"
+                                    )
+                                    self.active_streams[key][
+                                        "connection_status"
+                                    ] = new_status_str
 
-                elif t == Gst.MessageType.WARNING:
-                    warn, debug = message.parse_warning()
-                    src_name = (
-                        msg_src.get_name() if hasattr(msg_src, "get_name") else "?"
-                    )
-                    pipeline_description = f"stream {key} (details maybe lost)"
-                    with self.lock:
-                        stream_info = self.active_streams.get(key)
-                    if stream_info:
-                        config_dict = stream_info.get("config", {})
-                        mode = stream_info.get("mode", "?")
-                        input_type = config_dict.get("input_type", "?")
-                        rtp_encap = config_dict.get("rtp_encapsulation", False)
-                        pipeline_description = f"stream {key} ({mode}, input:{input_type}{', RTP' if rtp_encap else ''})"
-                    self.logger.warning(
-                        f"BUS_MSG: GStreamer warning on {pipeline_description} from '{src_name}': {warn.message}. Debug: {debug}"
-                    )  # Keep WARNING
-
-            except Exception as e:
+            elif t == Gst.MessageType.ERROR:
+                err, debug = message.parse_error()
                 self.logger.error(
-                    f"!!! Uncaught exception in bus handler for stream {key} !!!: {e}",
-                    exc_info=True,
-                )  # Keep ERROR
-        finally:
-            self.logger.debug(
-                f"Stream {key}: Bus handler finishing. Disconnecting handler: {should_disconnect_handler}"
-            )  # Keep DEBUG
-            return not should_disconnect_handler
+                    f"BUS_MSG: GStreamer error on stream {key} from '{src_name}': {err.message}. Debug: {debug}"
+                )
+                with self.lock:
+                    if key in self.active_streams and not is_stopping:
+                        self.active_streams[key]["connection_status"] = (
+                            "Error: " + err.message
+                        )
+                        self.active_streams[key]["stopping"] = True
+                        self._schedule_null_state(pipeline_obj, key)
 
-    # --- stop_stream ---
+            elif t == Gst.MessageType.EOS:
+                self.logger.info(
+                    f"BUS_MSG: EOS received for stream {key} from '{src_name}'. Initiating stop."
+                )
+                with self.lock:
+                    if key in self.active_streams and not is_stopping:
+                        self.active_streams[key]["connection_status"] = "Ended (EOS)"
+                        self.active_streams[key]["stopping"] = True
+                        self._schedule_null_state(pipeline_obj, key)
+
+            elif t == Gst.MessageType.WARNING:
+                warn, debug = message.parse_warning()
+                self.logger.warning(
+                    f"BUS_MSG: GStreamer warning on stream {key} from '{src_name}': {warn.message}. Debug: {debug}"
+                )
+
+        except Exception as e:
+            self.logger.error(
+                f"!!! Uncaught exception in bus handler for stream {key} !!!: {e}",
+                exc_info=True,
+            )
+
+        return not should_disconnect_handler
+
     def stop_stream(self, stream_key, force_remove=False):
-        # Keep existing logs at INFO/WARNING/ERROR
-        """Stops a stream by immediately removing it from the active list and then attempting GStreamer cleanup."""
         pipeline_to_cleanup = None
         bus_obj_to_cleanup = None
         key = -1
@@ -520,7 +395,6 @@ class StreamManager:
             return False, f"An unexpected error occurred during stop: {str(e)}"
 
     # --- SRT Signal Handlers ---
-    # Keep INFO/WARNING/DEBUG logs here as they are infrequent and useful
     def _on_caller_added(self, element, socket_id, addr, key):
         ip = self._extract_ip_from_socket_address(addr)
         self.logger.info(f"SRT 'caller-added' stream {key}: sock={socket_id}, ip={ip}")
@@ -576,8 +450,8 @@ class StreamManager:
                     self.logger.debug(
                         f"Listener {key} client disconnected during stop sequence. Status remains 'Stopping...'."
                     )
-                else:  # This case might indicate an issue if the sockets don't match
-                    if si.get("mode") == "listener":  # Only log warning for listeners
+                else:
+                    if si.get("mode") == "listener":
                         self.logger.warning(
                             f"Listener {key} client disconnect signal for socket {socket_id} did not match active socket {si.get('socket_id')}"
                         )
@@ -614,7 +488,6 @@ class StreamManager:
                 )
 
     # --- Generator Management ---
-    # Keep logs as they are (INFO/WARNING/ERROR)
     def _check_gst_element(self, element_name):
         return Gst.ElementFactory.find(element_name) is not None
 
@@ -630,9 +503,7 @@ class StreamManager:
                     self.logger.warning(
                         f"Generator {resolution} exists but state={Gst.Element.state_get_name(state)}. Restarting."
                     )
-                    self._stop_generator(
-                        resolution
-                    )  # Ensure cleanup before restart attempt
+                    self._stop_generator(resolution)
 
             self.logger.info(f"Starting generator pipeline for {resolution}...")
             pipeline_str = self._build_generator_pipeline_str(resolution)
@@ -648,7 +519,7 @@ class StreamManager:
                 return False
             if pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
                 self.logger.error(f"Failed set generator {resolution} PLAYING.")
-                pipeline.set_state(Gst.State.NULL)  # Attempt cleanup
+                pipeline.set_state(Gst.State.NULL)
                 return False
             self.logger.info(f"Generator {resolution} started.")
             self.generator_pipelines[resolution] = pipeline
@@ -689,9 +560,7 @@ class StreamManager:
         if aud_part:
             p_str = f"{vid_part} {aud_part} mpegtsmux name=mux ! queue ! udpsink host={host} port={port} auto-multicast=true"
         else:
-            vid_part_nomux = vid_part.replace(
-                "! queue ! mux.", "! queue"
-            )  # Adjust if no audio
+            vid_part_nomux = vid_part.replace("! queue ! mux.", "! queue")
             p_str = f"{vid_part_nomux} ! mpegtsmux name=mux ! queue ! udpsink host={host} port={port} auto-multicast=true"
         return p_str
 
@@ -715,9 +584,7 @@ class StreamManager:
                     f"Generator {resolution} not found or already stopped."
                 )
 
-    # --- start_stream function ---
     def start_stream(self, config, use_target_port_as_key=False):
-        # Keep existing logs at INFO/WARNING/ERROR
         key = None
         pipeline = None
         srt_uri = ""
@@ -730,7 +597,7 @@ class StreamManager:
             if mode == "caller":
                 _port = config.get("target_port")
                 key = self._validate_target_port(_port) if _port else None
-            else:  # listener
+            else:
                 _port = config.get("port")
                 key = self._validate_listener_port(_port) if _port else None
             if key is None:
@@ -786,16 +653,15 @@ class StreamManager:
             if mode == "caller":
                 if not target_addr:
                     raise ValueError("Target address required for caller mode.")
-                # --- REMOVED DEBUG LOGGING for URI construction ---
                 srt_params_joined = "&".join(srt_params)
                 srt_uri = f"srt://{target_addr}:{key}?{srt_params_joined}"
-            else:  # listener
-                bind_addr = "0.0.0.0"  # Default listener bind address
+            else:
+                bind_addr = "0.0.0.0"
                 srt_uri = f"srt://{bind_addr}:{key}?{'&'.join(srt_params)}"
 
             rtp_payload_str = ""
             pipeline_input_str = ""
-            sync = "false"  # Default sync for live sources
+            sync = "false"
             wait = "true" if mode == "listener" else "false"
             tsparse_part = ""
             if input_type == "file":
@@ -812,7 +678,7 @@ class StreamManager:
                 if not base.lower().endswith(".ts"):
                     raise ValueError("Only .ts files supported.")
                 pipeline_input_str = f'filesrc location="{abs_path}"'
-                sync = "true"  # Use sync=true for file sources
+                sync = "true"
                 input_detail_log = base
                 try:
                     smoothing_us = int(config.get("smoothing_latency_ms", 30)) * 1000
@@ -821,9 +687,7 @@ class StreamManager:
                 tsparse_name = f"tsparse_{key}"
                 tsparse_part = f'! tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_us} parse-private-sections=true ! queue'
                 if config["rtp_encapsulation"]:
-                    raise ValueError(
-                        "RTP Encapsulation not supported for file inputs."
-                    )  # Should be caught by form/API validation too
+                    raise ValueError("RTP Encapsulation not supported for file inputs.")
             elif input_type == "multicast":
                 mc_addr = config.get("multicast_address")
                 mc_port = config.get("multicast_port")
@@ -834,7 +698,7 @@ class StreamManager:
                 mc_iface = (
                     config.get("multicast_interface") or DEFAULT_MULTICAST_INTERFACE
                 )
-                pipeline_input_str = f'udpsrc uri="udp://{mc_addr}:{mc_port}" multicast-iface="{mc_iface}" buffer-size=20971520 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
+                pipeline_input_str = f'udpsrc uri="udp://{mc_addr}:{mc_port}" multicast-iface="{mc_iface}" buffer-size=2097152 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
                 input_detail_log = f"udp://{mc_addr}:{mc_port}"
                 if rtp_encapsulation:
                     rtp_payload_str = "rtpmp2tpay pt=33 mtu=1316 ! queue ! "
@@ -855,7 +719,7 @@ class StreamManager:
                         f"Failed to start required generator pipeline for {resolution}"
                     )
                 udp_uri = COLORBAR_URIS[resolution]
-                pipeline_input_str = f'udpsrc uri="{udp_uri}" buffer-size=20971520 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
+                pipeline_input_str = f'udpsrc uri="{udp_uri}" buffer-size=2097152 caps="video/mpegts, systemstream=(boolean)true, packetsize=(int)188"'
                 input_detail_log = f"Colorbars {resolution.upper()}"
                 if rtp_encapsulation:
                     rtp_payload_str = "rtpmp2tpay pt=33 mtu=1316 ! queue ! "
@@ -864,16 +728,14 @@ class StreamManager:
                 except:
                     smoothing_us = 30000
                 tsparse_name = f"tsparse_{key}"
-                tsparse_part = f'! tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_us} parse-private-sections=true ! queue'  # Use full version
+                tsparse_part = f'! tsparse name="{tsparse_name}" set-timestamps=true alignment=7 smoothing-latency={smoothing_us} parse-private-sections=true ! queue'
                 sync = "false"
             else:
                 raise ValueError(f"Unsupported input_type: {input_type}")
 
             pipeline_str = f'{pipeline_input_str} {tsparse_part} ! {rtp_payload_str}srtsink name="{sink_name}" uri="{srt_uri}" async=false sync={sync} wait-for-connection={wait}'
-            pipeline_str = " ".join(pipeline_str.split())  # Normalize whitespace
-            self.logger.debug(
-                f"Pipeline {key}: {pipeline_str}"
-            )  # Keep DEBUG log for pipeline string
+            pipeline_str = " ".join(pipeline_str.split())
+            self.logger.debug(f"Pipeline {key}: {pipeline_str}")
 
             try:
                 pipeline = Gst.parse_launch(pipeline_str)
@@ -928,7 +790,7 @@ class StreamManager:
                 }
                 self.logger.info(
                     f"set_state(PLAYING) {k} returned: {s_map.get(ret,'?')}"
-                )  # Keep INFO
+                )
                 if ret == Gst.StateChangeReturn.FAILURE:
                     with self.lock:
                         if k in self.active_streams and not self.active_streams[k].get(
@@ -940,7 +802,7 @@ class StreamManager:
                             self.logger.error(
                                 f"Stream {k} failed to transition from READY to PAUSED/PLAYING."
                             )
-                return False  # Remove idle source
+                return False
 
             GLib.idle_add(
                 set_playing_safe, pipeline, key, priority=GLib.PRIORITY_DEFAULT
@@ -966,8 +828,6 @@ class StreamManager:
                 self.active_streams.pop(key, None)
             return False, f"Unexpected error: {str(e)}"
 
-    # --- ROBUST Stats Parsing Function ---
-    # Keep this function as is
     def _extract_stats_from_gstruct(self, stats_struct):
         stats = {
             "timestamp": time.time(),
@@ -1009,18 +869,14 @@ class StreamManager:
                     if isinstance(nested_struct, Gst.Structure):
                         self.logger.debug(
                             "Parsing stats from nested 'callers' structure (Listener)."
-                        )  # Keep DEBUG
+                        )
                         source_struct = nested_struct
                     else:
                         stats["error"] = "Nested caller stats has unexpected type."
                 else:
-                    stats["error"] = (
-                        "Listener mode, but no active callers connected."  # Error if empty callers array
-                    )
+                    stats["error"] = "Listener mode, but no active callers connected."
             else:
-                self.logger.debug(
-                    "Parsing stats from top-level structure (Caller?)."
-                )  # Keep DEBUG
+                self.logger.debug("Parsing stats from top-level structure (Caller?).")
                 source_struct = stats_struct
 
             if source_struct:
@@ -1087,13 +943,11 @@ class StreamManager:
         except Exception as e:
             self.logger.error(
                 f"Unexpected error during SRT stats parsing: {e}", exc_info=True
-            )  # Keep ERROR
+            )
             stats["error"] = f"Internal parsing error: {str(e)}"
         return stats
 
-    # --- get_stream_statistics ---
     def get_stream_statistics(self, stream_key):
-        # Keep existing logs at INFO/WARNING/ERROR
         stats = {"error": None}
         pipeline = None
         key = -1
@@ -1105,10 +959,8 @@ class StreamManager:
                 pipeline = info.get("pipeline") if info else None
 
             if not info:
-                # self.logger.debug(f"Info dict missing for stream {key} in get_stream_statistics (likely stopped).") # DEBUG REMOVED
                 return {"error": f"Stream {key} stopped or removed."}
             if not pipeline:
-                # self.logger.debug(f"Pipeline object missing for stream {key} in get_stream_statistics (likely stopped).") # DEBUG REMOVED
                 return {
                     "error": f"Stream {key} stopped or stopping (pipeline missing)."
                 }
@@ -1119,7 +971,6 @@ class StreamManager:
 
             _ret, current_state, _ = pipeline.get_state(timeout=10 * Gst.MSECOND)
             if current_state < Gst.State.PAUSED:
-                # self.logger.debug(f"Stats request for {key} skipped, pipeline state is {Gst.Element.state_get_name(current_state)}.") # DEBUG REMOVED
                 return {
                     "error": f"Stream {key} pipeline state is {Gst.Element.state_get_name(current_state)}, cannot get stats."
                 }
@@ -1129,7 +980,6 @@ class StreamManager:
                 stats = self._extract_stats_from_gstruct(stats_struct)
             else:
                 stats = {"error": "Stats structure was None from srtsink"}
-                # self.logger.debug(f"Stats structure was None for stream {key}") # DEBUG REMOVED
 
             with self.lock:
                 info = self.active_streams.get(key)
@@ -1160,16 +1010,13 @@ class StreamManager:
             }
             self.logger.warning(
                 f"AttributeError getting stats for {key}: {ae}", exc_info=False
-            )  # Keep WARNING
+            )
         except Exception as e:
             stats = {"error": f"Unexpected error getting stats: {e}"}
-            self.logger.error(f"Err get stats {key}: {e}", exc_info=True)  # Keep ERROR
+            self.logger.error(f"Err get stats {key}: {e}", exc_info=True)
         return self._sanitize_for_json(stats)
 
-    # --- get_active_streams ---
     def get_active_streams(self):
-        # Keep existing logs at INFO/WARNING/ERROR
-        """Gets a summary of active streams including key stats for the UI dashboard."""
         streams = {}
         now = time.time()
         with self.lock:
@@ -1238,27 +1085,24 @@ class StreamManager:
                                         stream_stats_subset["error"] = parsed_stats.get(
                                             "error"
                                         )
-                                        # self.logger.debug(f"Stats parsing error for dashboard stream {key}: {stream_stats_subset['error']}") # DEBUG REMOVED
                                 else:
                                     stream_stats_subset["error"] = (
                                         "Stats structure None from sink"
                                     )
-                                    # self.logger.debug(f"Stats structure was None for dashboard stream {key}") # DEBUG REMOVED
                             else:
                                 stream_stats_subset["error"] = (
                                     f"Pipeline not ready ({Gst.Element.state_get_name(current_state)})"
                                 )
-                                # self.logger.debug(f"Pipeline not ready for stats for dashboard stream {key}: {stream_stats_subset['error']}") # DEBUG REMOVED
                         else:
                             stream_stats_subset["error"] = "Sink not found"
                             self.logger.warning(
                                 f"Sink srtsink_{key} not found for dashboard stats."
-                            )  # Keep WARNING
+                            )
                     except Exception as stats_e:
                         self.logger.warning(
                             f"Could not get stats for dashboard stream {key}: {stats_e}",
                             exc_info=False,
-                        )  # Keep WARNING
+                        )
                         stream_stats_subset["error"] = (
                             f"Exception: {type(stats_e).__name__}"
                         )
@@ -1269,7 +1113,7 @@ class StreamManager:
                 elif status not in [
                     "Connected",
                     "Running",
-                ]:  # Only set error if status is neither
+                ]:
                     stream_stats_subset["error"] = (
                         f"Status not Connected/Running ({status})"
                     )
@@ -1301,9 +1145,7 @@ class StreamManager:
                 }
         return self._sanitize_for_json(streams)
 
-    # --- get_debug_info ---
     def get_debug_info(self, stream_key):
-        # Removed specific debug logs, keeping essential warnings/errors
         debug = {"error": None}
         key = -1
         pipeline = None
@@ -1313,17 +1155,6 @@ class StreamManager:
             with self.lock:
                 info = self.active_streams.get(key)
 
-            # === START DEBUG LOGGING REMOVAL ===
-            # Original debug logging commented out:
-            # if not info: self.logger.warning(f"DEBUG_GET_INFO ({key}): Stream info dict NOT FOUND in active_streams.")
-            # else:
-            #     self.logger.info(f"DEBUG_GET_INFO ({key}): Stream info dict FOUND. Keys: {list(info.keys())}")
-            #     pipeline = info.get("pipeline")
-            #     if pipeline: self.logger.info(f"DEBUG_GET_INFO ({key}): Pipeline object reference FOUND in info dict.")
-            #     else: self.logger.warning(f"DEBUG_GET_INFO ({key}): Pipeline object reference IS MISSING (None/False) in info dict! Info dict dump: {info}")
-            # === END DEBUG LOGGING REMOVAL ===
-
-            # Need to get pipeline ref here now if info exists
             if info:
                 pipeline = info.get("pipeline")
             else:
@@ -1352,10 +1183,8 @@ class StreamManager:
                 try:
                     _, state, _ = pipeline.get_state(timeout=100 * Gst.MSECOND)
                     debug["pipeline_state"] = Gst.Element.state_get_name(state)
-                    # self.logger.info(f"DEBUG_GET_INFO ({key}): Successfully got pipeline state: {debug['pipeline_state']}") # DEBUG REMOVED
                 except Exception as state_e:
                     debug["pipeline_state"] = f"Error querying state: {state_e}"
-                    # self.logger.warning(f"DEBUG_GET_INFO ({key}): Exception querying pipeline state: {state_e}") # DEBUG REMOVED
             else:
                 debug["pipeline_state"] = "Pipeline missing (already stopped?)"
 
@@ -1371,14 +1200,12 @@ class StreamManager:
         except Exception as e:
             self.logger.error(
                 f"Error getting debug info for stream {key}: {e}", exc_info=True
-            )  # Keep ERROR
+            )
             debug = {"error": f"Unexpected error getting debug info: {e}"}
 
         return self._sanitize_for_json(debug)
 
-    # --- shutdown ---
     def shutdown(self):
-        # Keep existing logs
         self.logger.info("Shutting down StreamManager...")
         keys_to_stop = []
         gen_keys_to_stop = []
@@ -1403,14 +1230,4 @@ class StreamManager:
                 self.logger.warning(
                     f"Generators still active after shutdown: {list(self.generator_pipelines.keys())}"
                 )
-        if self.mainloop and self.mainloop.is_running():
-            self.logger.info("Quitting GLib MainLoop...")
-            self.mainloop.quit()
-        if self.thread and self.thread.is_alive():
-            self.logger.info("Waiting for main loop thread to join...")
-            self.thread.join(timeout=5.0)
-            if self.thread.is_alive():
-                self.logger.warning("Main loop thread did not join cleanly!")
-            else:
-                self.logger.info("Main loop thread joined.")
-        self.logger.info("StreamManager shutdown complete.")
+        self.logger.info("StreamManager shutdown sequence complete.")
