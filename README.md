@@ -210,7 +210,7 @@ Assuming installation under `/opt/mcr-srt-streamer`. Adapt as needed.
 ### 1\. Obtain the source code
 
 ```bash
-sudo git clone https://your-github-repo/mcr-srt-streamer.git /opt/mcr-srt-streamer
+sudo git clone https://github.com/nt74/mcr-srt-streamer.git /opt/mcr-srt-streamer
 cd /opt/mcr-srt-streamer
 ```
 
@@ -257,11 +257,11 @@ A more advanced method of building GStreamer from source is also provided for us
      gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free gstreamer1-libav \
      gstreamer1-plugin-x264 gstreamer1-plugin-openh264 \
      nginx curl iperf3 iputils bind-utils ffmpeg mediainfo httpd-tools \
-     [cite_start]python3-chardet [cite: 411] [cite_start]python3-click [cite: 412] [cite_start]python3-flask [cite: 417] [cite_start]python3-flask-wtf [cite: 417] \
-     [cite_start]python3-idna [cite: 423] [cite_start]python3-itsdangerous [cite: 424] [cite_start]python3-jinja2 [cite: 427] [cite_start]python3-markupsafe [cite: 428] \
-     [cite_start]python3-psutil [cite: 431] [cite_start]python3-cairo python3-pytz [cite: 433] python3-requests \
-     [cite_start]python3-six [cite: 437] [cite_start]python3-urllib3 [cite: 438] [cite_start]python3-werkzeug [cite: 440] [cite_start]python3-wtforms [cite: 442] \
-     [cite_start]python3-gunicorn [cite: 422] [cite_start]python3-gevent [cite: 418]
+     python3-chardet python3-click python3-flask python3-flask-wtf \
+     python3-idna python3-itsdangerous python3-jinja2 python3-markupsafe \
+     python3-psutil python3-cairo python3-pytz python3-requests \
+     python3-six python3-urllib3 python3-werkzeug python3-wtforms \
+     python3-gunicorn python3-gevent
     ```
 
     *Note: The `gstreamer1-plugins-bad-free` package in some repos may not include `srtsink`. If it's missing, you must use Method 2.*
