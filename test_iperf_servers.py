@@ -120,6 +120,20 @@ def main():
     passed_count = 0
     failed_count = 0
 
+    # Count by continent to show progress
+    continent_counts = {}
+    for entry in full_server_list:
+        if isinstance(entry, dict):
+            # FIXED: Use PROVIDER field as the continent (contains actual continent names)
+            continent = entry.get("PROVIDER", "Unknown").strip()
+            continent_counts[continent] = continent_counts.get(continent, 0) + 1
+
+    print(f"Server distribution by continent/region:")
+    for continent, count in sorted(continent_counts.items()):
+        if continent and continent != "Unknown":
+            print(f"  {continent}: {count} servers")
+    print("-" * 30)
+
     for entry in full_server_list:
         if not isinstance(entry, dict):
             continue
@@ -127,8 +141,17 @@ def main():
         if not host or not port:
             continue
 
+        # FIXED: Use PROVIDER field as the continent for display
+        continent = entry.get("PROVIDER", "Unknown").strip()
+        provider_name = entry.get("CONTINENT", "").strip()
+        site = entry.get("SITE", "Unknown").strip()
+        country = entry.get("COUNTRY", "").strip()
+
         tested_count += 1
         server_id = f"{host}:{port}"
+        server_info = f"{site}, {country} ({continent})"
+        if provider_name:
+            server_info += f" - {provider_name}"
 
         iperf_cmd_list = [
             "iperf3",
@@ -148,7 +171,7 @@ def main():
             str(IPERF_CONNECT_TIMEOUT_MS),
         ]
 
-        print(f"Testing {server_id}...", end=" ", flush=True)
+        print(f"Testing {server_id} ({server_info})...", end=" ", flush=True)
 
         reason = ""
         passed = False
@@ -210,10 +233,25 @@ def main():
         f"Test Complete. Total Tested: {tested_count}, Passed UDP: {passed_count}, Failed UDP: {failed_count}"
     )
 
+    # Show final distribution by continent
+    if udp_safe_servers:
+        safe_continent_counts = {}
+        for entry in udp_safe_servers:
+            # FIXED: Use PROVIDER field as the continent
+            continent = entry.get("PROVIDER", "Unknown").strip()
+            safe_continent_counts[continent] = (
+                safe_continent_counts.get(continent, 0) + 1
+            )
+
+        print(f"\nUDP-safe servers by continent/region:")
+        for continent, count in sorted(safe_continent_counts.items()):
+            if continent and continent != "Unknown":
+                print(f"  {continent}: {count} servers")
+
     try:
         with open(UDP_SAFE_LIST_PATH, "w", encoding="utf-8") as f:
             json.dump(udp_safe_servers, f, indent=4)
-        print(f"Saved {passed_count} passing servers to {UDP_SAFE_LIST_PATH}")
+        print(f"\nSaved {passed_count} passing servers to {UDP_SAFE_LIST_PATH}")
         try:
             with open(UDP_SAFE_LIST_PATH + ".timestamp", "w") as ts_f:
                 ts_f.write(str(time.time()))

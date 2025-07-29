@@ -261,7 +261,16 @@ class NetworkTester:
                 logger.warning(f"Skipping non-dictionary entry at index {index}.")
                 continue
             host, port = self._parse_host_port(raw_server)
-            continent = raw_server.get("CONTINENT")
+
+            # FIXED: Now use PROVIDER as the continent (which contains actual continent names)
+            # and keep CONTINENT as provider_name (which contains ISP/provider names)
+            continent = raw_server.get(
+                "PROVIDER", ""
+            ).strip()  # This now contains actual continent
+            provider_name = raw_server.get(
+                "CONTINENT", ""
+            ).strip()  # This now contains ISP/provider name
+
             if host and port and continent:
                 processed_servers.append(
                     {
@@ -269,15 +278,18 @@ class NetworkTester:
                         "port": port,
                         "site": raw_server.get("SITE", "N/A"),
                         "country": raw_server.get("COUNTRY"),
-                        "continent": continent,
-                        "provider": raw_server.get("PROVIDER"),
+                        "continent": continent,  # Now correctly using PROVIDER field
+                        "provider": provider_name
+                        or raw_server.get(
+                            "PROVIDER"
+                        ),  # Keep both for backward compatibility
                         "options_str": raw_server.get("OPTIONS"),
                     }
                 )
                 count_parsed += 1
             else:
                 logger.debug(
-                    f"Skipping entry due to host/port parsing failure or missing continent: {raw_server.get('IP_HOST', 'N/A')}"
+                    f"Skipping entry due to host/port parsing failure or missing continent: {raw_server.get('IP/HOST', 'N/A')}"
                 )
         logger.info(
             f"Successfully processed {count_parsed} servers from {os.path.basename(source_file or 'N/A')}."

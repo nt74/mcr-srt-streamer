@@ -1,962 +1,792 @@
 [
     {
-        "IP/HOST": "41.110.39.130",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Africa",
-        "COUNTRY": "DZ",
-        "SITE": "Algiers",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "213.158.175.240",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Africa",
-        "COUNTRY": "EG",
-        "SITE": "Cairo",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "102.214.66.39",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Africa",
-        "COUNTRY": "GN",
-        "SITE": "Accra",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "102.214.66.19",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Africa",
-        "COUNTRY": "GN",
-        "SITE": "Accra",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest.telecom.mu",
-        "PORT": "5201-5209",
-        "OPTIONS": "-R,-u",
-        "GB/S": "",
-        "CONTINENT": "Africa",
-        "COUNTRY": "MU",
-        "SITE": "Port Louis",
-        "PROVIDER": "Mauritius Telecom"
-    },
-    {
-        "IP/HOST": "41.226.22.119",
-        "PORT": "9202-9240",
-        "OPTIONS": "-R,-u",
-        "GB/S": "",
-        "CONTINENT": "Africa",
-        "COUNTRY": "TN",
-        "SITE": "Tunis",
-        "PROVIDER": "Topnet"
-    },
-    {
-        "IP/HOST": "41.210.185.162",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Africa",
-        "COUNTRY": "UG",
-        "SITE": "Kampala",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "169.150.238.161",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Africa",
-        "COUNTRY": "ZA",
-        "SITE": "Johannesburg",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
         "IP/HOST": "86.96.154.106",
         "PORT": "7004-7013",
         "OPTIONS": "-R,-u",
         "GB/S": "",
-        "CONTINENT": "Asia",
+        "CONTINENT": "",
         "COUNTRY": "AE",
         "SITE": "Dubai",
-        "PROVIDER": ""
+        "PROVIDER": "Asia"
     },
     {
-        "IP/HOST": "84.17.57.129",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Asia",
-        "COUNTRY": "HK",
-        "SITE": "Hong Kong",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "103.185.255.183",
-        "PORT": "5201-5230",
+        "IP/HOST": "170.254.229.178",
+        "PORT": "5201-5209",
         "OPTIONS": "-R,-u",
         "GB/S": "",
-        "CONTINENT": "Asia",
-        "COUNTRY": "ID",
-        "SITE": "Jakarta",
-        "PROVIDER": "SNT"
+        "CONTINENT": "",
+        "COUNTRY": "CO",
+        "SITE": "Cartago",
+        "PROVIDER": "Latin America"
     },
     {
-        "IP/HOST": "169.150.202.193",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Asia",
-        "COUNTRY": "IL",
-        "SITE": "Tel Aviv",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speed.netfiber.net.il",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "1",
-        "CONTINENT": "Asia",
-        "COUNTRY": "IL",
-        "SITE": "Jerusalem",
-        "PROVIDER": "Netfiber"
-    },
-    {
-        "IP/HOST": "89.187.160.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Asia",
-        "COUNTRY": "JP",
-        "SITE": "Tokyo",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "89.187.162.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Asia",
-        "COUNTRY": "SG",
-        "SITE": "Singapore",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "sgp.proof.ovh.net",
-        "PORT": "5204-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "1",
-        "CONTINENT": "Asia",
-        "COUNTRY": "SG",
-        "SITE": "Singapore",
-        "PROVIDER": "OVH"
-    },
-    {
-        "IP/HOST": "156.146.52.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Asia",
-        "COUNTRY": "TR",
-        "SITE": "Istanbul",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest.uztelecom.uz",
-        "PORT": "5200-5209",
+        "IP/HOST": "iperf.angolacables.co.ao",
+        "PORT": "9200-9240",
         "OPTIONS": "-R,-6,-u",
         "GB/S": "10",
-        "CONTINENT": "Asia",
-        "COUNTRY": "UZ",
-        "SITE": "Tashkent",
-        "PROVIDER": "UZ Telecom"
-    },
-    {
-        "IP/HOST": "185.180.12.40",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "AT",
-        "SITE": "Vienna",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "207.211.214.65",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "BE",
-        "SITE": "Brussels",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "37.19.203.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "BG",
-        "SITE": "Sofia",
-        "PROVIDER": "DATAPACKET"
+        "CONTINENT": "Angola Cables",
+        "COUNTRY": "AO",
+        "SITE": "Luanda",
+        "PROVIDER": "Africa"
     },
     {
         "IP/HOST": "t5.cscs.ch",
         "PORT": "5201-5202",
         "OPTIONS": "-R,-6",
         "GB/S": "100",
-        "CONTINENT": "Europe",
+        "CONTINENT": "CSCS",
         "COUNTRY": "CH",
         "SITE": "Z\u00fcrich",
-        "PROVIDER": "CSCS"
-    },
-    {
-        "IP/HOST": "89.187.165.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "CH",
-        "SITE": "Z\u00fcrich",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest.init7.net",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "20",
-        "CONTINENT": "Europe",
-        "COUNTRY": "CH",
-        "SITE": "Winterthur",
-        "PROVIDER": "Init7"
-    },
-    {
-        "IP/HOST": "speedtest.shinternet.ch",
-        "PORT": "5200-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "CH",
-        "SITE": "Schaffhausen",
-        "PROVIDER": "Sasag"
-    },
-    {
-        "IP/HOST": "speedtest.iway.ch",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "CH",
-        "SITE": "Z\u00fcrich",
-        "PROVIDER": "iWay"
-    },
-    {
-        "IP/HOST": "185.152.65.113",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "CZ",
-        "SITE": "Prague",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "85.163.71.241",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "",
-        "CONTINENT": "Europe",
-        "COUNTRY": "CZ",
-        "SITE": "Hrdlo\u0159ezy",
-        "PROVIDER": "SledovaniTV"
-    },
-    {
-        "IP/HOST": "fra.speedtest.clouvider.net",
-        "PORT": "5200-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DE",
-        "SITE": "Frankfurt",
-        "PROVIDER": "Clouvider"
-    },
-    {
-        "IP/HOST": "185.102.219.93",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DE",
-        "SITE": "Frankfurt",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "178.215.228.109",
-        "PORT": "9204-9240",
-        "OPTIONS": "-R,-u",
-        "GB/S": "",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DE",
-        "SITE": "Frankfurt",
-        "PROVIDER": "Eseven"
-    },
-    {
-        "IP/HOST": "speedtest.ip-projects.de",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DE",
-        "SITE": "Frankfurt",
-        "PROVIDER": "IP Projects"
-    },
-    {
-        "IP/HOST": "speedtest.wtnet.de",
-        "PORT": "5200-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "40",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DE",
-        "SITE": "Norderstedt",
-        "PROVIDER": "wilhelm.tel"
-    },
-    {
-        "IP/HOST": "speedtest.wtnet.de",
-        "PORT": "5300-5309",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "40",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DE",
-        "SITE": "Norderstedt",
-        "PROVIDER": "wilhelm.tel"
-    },
-    {
-        "IP/HOST": "121.127.45.65",
-        "PORT": "5201",
-        "OPTIONS": "-R",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DK",
-        "SITE": "Copenhagen",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speed1.fiberby.dk",
-        "PORT": "9201-9240",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "25",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DK",
-        "SITE": "Copenhagen",
-        "PROVIDER": "Fiberby"
-    },
-    {
-        "IP/HOST": "speed2.fiberby.dk",
-        "PORT": "9201-9240",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "25",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DK",
-        "SITE": "Copenhagen",
-        "PROVIDER": "Fiberby"
-    },
-    {
-        "IP/HOST": "speedtest.hiper.dk",
-        "PORT": "5201-5205",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "",
-        "CONTINENT": "Europe",
-        "COUNTRY": "DK",
-        "SITE": "Copenhagen",
-        "PROVIDER": "Hiper"
-    },
-    {
-        "IP/HOST": "185.93.3.50",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "ES",
-        "SITE": "Madrid",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "138.199.14.66",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "FR",
-        "SITE": "Marseille",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "185.93.2.193",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "FR",
-        "SITE": "Paris",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "lon.speedtest.clouvider.net",
-        "PORT": "5200-5208",
-        "OPTIONS": "-R,-6",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "GB",
-        "SITE": "London",
-        "PROVIDER": "Cloudvider"
-    },
-    {
-        "IP/HOST": "185.59.221.51",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "GB",
-        "SITE": "London",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest2.lightningfibre.net.uk",
-        "PORT": "4000-4007",
-        "OPTIONS": "-R,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "GB",
-        "SITE": "London",
-        "PROVIDER": "Lightning Fibre"
-    },
-    {
-        "IP/HOST": "speedtest-mer-a.mythic-beasts.com",
-        "PORT": "5201-5205",
-        "OPTIONS": "-R,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "GB",
-        "SITE": "London",
-        "PROVIDER": "Mythic Beasts"
-    },
-    {
-        "IP/HOST": "169.150.252.2",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "GR",
-        "SITE": "Athens",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "169.150.242.129",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "HR",
-        "SITE": "Zagreb",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "87.249.137.8",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "IR",
-        "SITE": "Dublin",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest.lu.buyvm.net",
-        "PORT": "5201",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "",
-        "CONTINENT": "Europe",
-        "COUNTRY": "LU",
-        "SITE": "Bissen",
-        "PROVIDER": "BuyVM"
-    },
-    {
-        "IP/HOST": "ams.speedtest.clouvider.net",
-        "PORT": "5200-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NL",
-        "SITE": "Amsterdam",
-        "PROVIDER": "Clouvider"
-    },
-    {
-        "IP/HOST": "iperf-ams-nl.eranium.net",
-        "PORT": "5201-5210",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "100",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NL",
-        "SITE": "Amsterdam",
-        "PROVIDER": "Eranium"
-    },
-    {
-        "IP/HOST": "speedtest.nl3.mirhosting.net",
-        "PORT": "5201-5210",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "40",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NL",
-        "SITE": "Amsterdam",
-        "PROVIDER": "Mirhosting"
-    },
-    {
-        "IP/HOST": "speedtest.ams1.novogara.net",
-        "PORT": "5200-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "20",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NL",
-        "SITE": "Amsterdam",
-        "PROVIDER": "Novogara"
-    },
-    {
-        "IP/HOST": "ping-ams1.online.net",
-        "PORT": "5200-5209",
-        "OPTIONS": "-R,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NL",
-        "SITE": "Amsterdam",
-        "PROVIDER": "Scaleway"
-    },
-    {
-        "IP/HOST": "lg.ams-nl.terrahost.com",
-        "PORT": "9206-9240",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NL",
-        "SITE": "Amsterdam",
-        "PROVIDER": "TerraHost"
-    },
-    {
-        "IP/HOST": "lg.gigahost.no",
-        "PORT": "9201-9240",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "100",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NO",
-        "SITE": "Sandefjord",
-        "PROVIDER": "Gigahost"
-    },
-    {
-        "IP/HOST": "lg.terrahost.com",
-        "PORT": "9200-9240",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "NO",
-        "SITE": "Sandefjord",
-        "PROVIDER": "Terrahost"
-    },
-    {
-        "IP/HOST": "185.246.208.67",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "PL",
-        "SITE": "Warsaw",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "109.61.94.65",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "PT",
-        "SITE": "Lisbon",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "lisboa.speedtest.net.zon.pt",
-        "PORT": "5201-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "PT",
-        "SITE": "Lisbon",
-        "PROVIDER": "NOS"
-    },
-    {
-        "IP/HOST": "porto.speedtest.net.zon.pt",
-        "PORT": "5201-5209",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "PT",
-        "SITE": "Porto",
-        "PROVIDER": "NOS"
-    },
-    {
-        "IP/HOST": "185.102.217.170",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "RO",
-        "SITE": "Bucharest",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest1.sox.rs",
-        "PORT": "9201-9240",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "RS",
-        "SITE": "Belgrade",
-        "PROVIDER": "SOX"
-    },
-    {
-        "IP/HOST": "speedtest.keff.org",
-        "PORT": "9201-9240",
-        "OPTIONS": "-R,-u",
-        "GB/S": "",
-        "CONTINENT": "Europe",
-        "COUNTRY": "SE",
-        "SITE": "Stockholm",
-        "PROVIDER": "KeFF VPS"
-    },
-    {
-        "IP/HOST": "speedtest.ownit.se",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "1",
-        "CONTINENT": "Europe",
-        "COUNTRY": "SE",
-        "SITE": "Stockholm",
-        "PROVIDER": "Ownit"
-    },
-    {
-        "IP/HOST": "156.146.40.65",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "SK",
-        "SITE": "Bratislava",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "37.19.218.65",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Europe",
-        "COUNTRY": "UA",
-        "SITE": "Kyiv",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "138.199.4.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "BR",
-        "SITE": "S\u00e3o Paulo",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "st1.zamix.com.br",
-        "PORT": "3000-3009",
-        "OPTIONS": "-R,-u",
-        "GB/S": "1",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "BR",
-        "SITE": "Barra Mansa",
-        "PROVIDER": "Zamix"
-    },
-    {
-        "IP/HOST": "speedtest.sao1.edgoo.net",
-        "PORT": "9206-9240",
-        "OPTIONS": "-R,-6,-u",
-        "GB/S": "",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "BR",
-        "SITE": "S\u00e3o Paulo",
-        "PROVIDER": "as47787.net"
-    },
-    {
-        "IP/HOST": "79.127.209.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "CL",
-        "SITE": "Santiago",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "169.150.228.129",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "CO",
-        "SITE": "Bogot\u00e1",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "152.204.128.194",
-        "PORT": "55200-55300",
-        "OPTIONS": "-R,-u",
-        "GB/S": "10",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "CO",
-        "SITE": "Bogot\u00e1",
-        "PROVIDER": "Movistar"
-    },
-    {
-        "IP/HOST": "156.146.53.53",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "CR",
-        "SITE": "San Jose",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest.telecablecr.com",
-        "PORT": "9201-9240",
-        "OPTIONS": "-R,-u",
-        "GB/S": "1",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "CR",
-        "SITE": "San Jos\u00e9",
-        "PROVIDER": "Telecable CR"
-    },
-    {
-        "IP/HOST": "121.127.43.65",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "Latin America",
-        "COUNTRY": "MX",
-        "SITE": "Quer\u00e9taro",
-        "PROVIDER": "DATAPACKET"
+        "PROVIDER": "Europe"
     },
     {
         "IP/HOST": "speedtest1.cwpanama.net",
         "PORT": "5505-5510",
         "OPTIONS": "-R,-u",
         "GB/S": "1",
-        "CONTINENT": "Latin America",
+        "CONTINENT": "CW Panama",
         "COUNTRY": "PA",
         "SITE": "Col\u00f3n",
-        "PROVIDER": "CW Panama"
+        "PROVIDER": "Latin America"
     },
     {
         "IP/HOST": "speedtest6.cwpanama.net",
         "PORT": "5505-5510",
         "OPTIONS": "-R,-u",
         "GB/S": "1",
-        "CONTINENT": "Latin America",
+        "CONTINENT": "CW Panama",
         "COUNTRY": "PA",
         "SITE": "Panam\u00e1",
-        "PROVIDER": "CW Panama"
+        "PROVIDER": "Latin America"
     },
     {
-        "IP/HOST": "138.199.57.129",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "CA",
-        "SITE": "Toronto",
-        "PROVIDER": "DATAPACKET"
+        "IP/HOST": "lon.speedtest.clouvider.net",
+        "PORT": "5200-5208",
+        "OPTIONS": "-R,-6",
+        "GB/S": "10",
+        "CONTINENT": "Cloudvider",
+        "COUNTRY": "GB",
+        "SITE": "London",
+        "PROVIDER": "Europe"
     },
     {
-        "IP/HOST": "as21723.goco.ca",
-        "PORT": "9200-9240",
-        "OPTIONS": "-R,-u",
-        "GB/S": "",
-        "CONTINENT": "North America",
-        "COUNTRY": "CA",
-        "SITE": "Montr\u00e9al",
-        "PROVIDER": "goco"
+        "IP/HOST": "fra.speedtest.clouvider.net",
+        "PORT": "5200-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "10",
+        "CONTINENT": "Clouvider",
+        "COUNTRY": "DE",
+        "SITE": "Frankfurt",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "ams.speedtest.clouvider.net",
+        "PORT": "5200-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "10",
+        "CONTINENT": "Clouvider",
+        "COUNTRY": "NL",
+        "SITE": "Amsterdam",
+        "PROVIDER": "Europe"
     },
     {
         "IP/HOST": "ash.speedtest.clouvider.net",
         "PORT": "5200-5209",
         "OPTIONS": "-R,-6,-u",
         "GB/S": "10",
-        "CONTINENT": "North America",
+        "CONTINENT": "Clouvider",
         "COUNTRY": "US",
         "SITE": "Ashburn",
-        "PROVIDER": "Clouvider"
+        "PROVIDER": "North America"
     },
     {
         "IP/HOST": "atl.speedtest.clouvider.net",
         "PORT": "5200-5209",
         "OPTIONS": "-R,-6,-u",
         "GB/S": "10",
-        "CONTINENT": "North America",
+        "CONTINENT": "Clouvider",
         "COUNTRY": "US",
         "SITE": "Atlanta",
-        "PROVIDER": "Clouvider"
+        "PROVIDER": "North America"
     },
     {
-        "IP/HOST": "dal.speedtest.clouvider.net",
+        "IP/HOST": "la.speedtest.clouvider.net",
         "PORT": "5200-5209",
         "OPTIONS": "-R,-u",
         "GB/S": "10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Dallas",
-        "PROVIDER": "Clouvider"
-    },
-    {
-        "IP/HOST": "185.152.66.67",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Atlanta",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "109.61.86.65",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Boston",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "185.93.1.65",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Chicago",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "89.187.164.1",
-        "PORT": "5201",
-        "OPTIONS": "-R",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Dallas",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "37.19.216.1",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Houston",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "185.152.67.2",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
+        "CONTINENT": "Clouvider",
         "COUNTRY": "US",
         "SITE": "Los Angeles",
-        "PROVIDER": "DATAPACKET"
+        "PROVIDER": "North America"
     },
     {
-        "IP/HOST": "195.181.162.195",
-        "PORT": "5201",
-        "OPTIONS": "-R,-u",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Miami",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "84.17.41.11",
-        "PORT": "5201",
-        "OPTIONS": "-R",
-        "GB/S": "2x10",
-        "CONTINENT": "North America",
-        "COUNTRY": "US",
-        "SITE": "Seattle",
-        "PROVIDER": "DATAPACKET"
-    },
-    {
-        "IP/HOST": "speedtest15.suddenlink.net",
-        "PORT": "5201",
+        "IP/HOST": "nyc.speedtest.clouvider.net",
+        "PORT": "5201-5209",
         "OPTIONS": "-R,-u",
         "GB/S": "10",
-        "CONTINENT": "North America",
+        "CONTINENT": "Clouvider",
         "COUNTRY": "US",
-        "SITE": "Charleston",
-        "PROVIDER": "Optimum"
-    },
-    {
-        "IP/HOST": "speedtest2.comvergence.com.au",
-        "PORT": "5200-5209",
-        "OPTIONS": "-R,-u",
-        "GB/S": "1",
-        "CONTINENT": "Oceania",
-        "COUNTRY": "AU",
-        "SITE": "Melbourne",
-        "PROVIDER": "COMVERGENCE"
+        "SITE": "New York City",
+        "PROVIDER": "North America"
     },
     {
         "IP/HOST": "143.244.63.144",
         "PORT": "5201",
         "OPTIONS": "-R,-u",
         "GB/S": "2x10",
-        "CONTINENT": "Oceania",
+        "CONTINENT": "DATAPACKET",
         "COUNTRY": "AU",
         "SITE": "Sydney",
-        "PROVIDER": "DATAPACKET"
+        "PROVIDER": "Oceania"
     },
     {
-        "IP/HOST": "syd.proof.ovh.net",
-        "PORT": "5207-5210",
+        "IP/HOST": "207.211.214.65",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "BE",
+        "SITE": "Brussels",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "37.19.203.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "BG",
+        "SITE": "Sofia",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "138.199.4.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "BR",
+        "SITE": "S\u00e3o Paulo",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "89.187.165.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "CH",
+        "SITE": "Z\u00fcrich",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "79.127.209.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "CL",
+        "SITE": "Santiago",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "169.150.228.129",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "CO",
+        "SITE": "Bogot\u00e1",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "156.146.53.53",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "CR",
+        "SITE": "San Jose",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "185.152.65.113",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "CZ",
+        "SITE": "Prague",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "121.127.45.65",
+        "PORT": "5201",
+        "OPTIONS": "-R",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "DK",
+        "SITE": "Copenhagen",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "41.110.39.130",
+        "PORT": "5201",
         "OPTIONS": "-R,-6,-u",
-        "GB/S": "1",
-        "CONTINENT": "Oceania",
-        "COUNTRY": "AU",
-        "SITE": "Sydney",
-        "PROVIDER": "OVH"
+        "GB/S": "10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "DZ",
+        "SITE": "Algiers",
+        "PROVIDER": "Africa"
+    },
+    {
+        "IP/HOST": "213.158.175.240",
+        "PORT": "5201",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "EG",
+        "SITE": "Cairo",
+        "PROVIDER": "Africa"
+    },
+    {
+        "IP/HOST": "185.93.3.50",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "ES",
+        "SITE": "Madrid",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "185.59.221.51",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "GB",
+        "SITE": "London",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "102.214.66.39",
+        "PORT": "5201",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "GN",
+        "SITE": "Accra",
+        "PROVIDER": "Africa"
+    },
+    {
+        "IP/HOST": "102.214.66.19",
+        "PORT": "5201",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "GN",
+        "SITE": "Accra",
+        "PROVIDER": "Africa"
+    },
+    {
+        "IP/HOST": "169.150.252.2",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "GR",
+        "SITE": "Athens",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "169.150.242.129",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "HR",
+        "SITE": "Zagreb",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "169.150.202.193",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "IL",
+        "SITE": "Tel Aviv",
+        "PROVIDER": "Asia"
+    },
+    {
+        "IP/HOST": "89.187.160.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "JP",
+        "SITE": "Tokyo",
+        "PROVIDER": "Asia"
+    },
+    {
+        "IP/HOST": "121.127.43.65",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "MX",
+        "SITE": "Quer\u00e9taro",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "185.102.218.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "NL",
+        "SITE": "Amsterdam",
+        "PROVIDER": "Europe"
     },
     {
         "IP/HOST": "154.81.51.4",
         "PORT": "5201",
         "OPTIONS": "-R,-u",
         "GB/S": "2x10",
-        "CONTINENT": "Oceania",
+        "CONTINENT": "DATAPACKET",
         "COUNTRY": "PG",
         "SITE": "Port Moresby",
-        "PROVIDER": "DATAPACKET"
+        "PROVIDER": "Oceania"
+    },
+    {
+        "IP/HOST": "109.61.94.65",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "PT",
+        "SITE": "Lisbon",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "89.187.162.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "SG",
+        "SITE": "Singapore",
+        "PROVIDER": "Asia"
+    },
+    {
+        "IP/HOST": "156.146.40.65",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "SK",
+        "SITE": "Bratislava",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "156.146.52.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "TR",
+        "SITE": "Istanbul",
+        "PROVIDER": "Asia"
+    },
+    {
+        "IP/HOST": "37.19.218.65",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "UA",
+        "SITE": "Kyiv",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "37.19.206.20",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "US",
+        "SITE": "Ashburn",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "185.152.66.67",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "US",
+        "SITE": "Atlanta",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "109.61.86.65",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "US",
+        "SITE": "Boston",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "185.93.1.65",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "US",
+        "SITE": "Chicago",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "89.187.164.1",
+        "PORT": "5201",
+        "OPTIONS": "-R",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "US",
+        "SITE": "Dallas",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "37.19.216.1",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "US",
+        "SITE": "Houston",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "84.17.41.11",
+        "PORT": "5201",
+        "OPTIONS": "-R",
+        "GB/S": "2x10",
+        "CONTINENT": "DATAPACKET",
+        "COUNTRY": "US",
+        "SITE": "Seattle",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "iperf-ams-nl.eranium.net",
+        "PORT": "5201-5210",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "100",
+        "CONTINENT": "Eranium",
+        "COUNTRY": "NL",
+        "SITE": "Amsterdam",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "178.215.228.109",
+        "PORT": "9204-9240",
+        "OPTIONS": "-R,-u",
+        "GB/S": "",
+        "CONTINENT": "Eseven",
+        "COUNTRY": "DE",
+        "SITE": "Frankfurt",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speed1.fiberby.dk",
+        "PORT": "9201-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "25",
+        "CONTINENT": "Fiberby",
+        "COUNTRY": "DK",
+        "SITE": "Copenhagen",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speed2.fiberby.dk",
+        "PORT": "9201-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "25",
+        "CONTINENT": "Fiberby",
+        "COUNTRY": "DK",
+        "SITE": "Copenhagen",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "lg.gigahost.no",
+        "PORT": "9201-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "100",
+        "CONTINENT": "Gigahost",
+        "COUNTRY": "NO",
+        "SITE": "Sandefjord",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.hiper.dk",
+        "PORT": "5201-5205",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "",
+        "CONTINENT": "Hiper",
+        "COUNTRY": "DK",
+        "SITE": "Copenhagen",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.init7.net",
+        "PORT": "5201",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "20",
+        "CONTINENT": "Init7",
+        "COUNTRY": "CH",
+        "SITE": "Winterthur",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.keff.org",
+        "PORT": "9201-9240",
+        "OPTIONS": "-R,-u",
+        "GB/S": "",
+        "CONTINENT": "KeFF VPS",
+        "COUNTRY": "SE",
+        "SITE": "Stockholm",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest2.lightningfibre.net.uk",
+        "PORT": "4000-4007",
+        "OPTIONS": "-R,-u",
+        "GB/S": "10",
+        "CONTINENT": "Lightning Fibre",
+        "COUNTRY": "GB",
+        "SITE": "London",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.nl3.mirhosting.net",
+        "PORT": "5201-5210",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "40",
+        "CONTINENT": "Mirhosting",
+        "COUNTRY": "NL",
+        "SITE": "Amsterdam",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "152.204.128.194",
+        "PORT": "55200-55300",
+        "OPTIONS": "-R,-u",
+        "GB/S": "10",
+        "CONTINENT": "Movistar",
+        "COUNTRY": "CO",
+        "SITE": "Bogot\u00e1",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "speedtest-mer-a.mythic-beasts.com",
+        "PORT": "5201-5205",
+        "OPTIONS": "-R,-u",
+        "GB/S": "10",
+        "CONTINENT": "Mythic Beasts",
+        "COUNTRY": "GB",
+        "SITE": "London",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "porto.speedtest.net.zon.pt",
+        "PORT": "5201-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "10",
+        "CONTINENT": "NOS",
+        "COUNTRY": "PT",
+        "SITE": "Porto",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speed.netfiber.net.il",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "1",
+        "CONTINENT": "Netfiber",
+        "COUNTRY": "IL",
+        "SITE": "Jerusalem",
+        "PROVIDER": "Asia"
+    },
+    {
+        "IP/HOST": "speedtest.ams1.novogara.net",
+        "PORT": "5200-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "20",
+        "CONTINENT": "Novogara",
+        "COUNTRY": "NL",
+        "SITE": "Amsterdam",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "syd.proof.ovh.net",
+        "PORT": "5207-5210",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "1",
+        "CONTINENT": "OVH",
+        "COUNTRY": "AU",
+        "SITE": "Sydney",
+        "PROVIDER": "Oceania"
+    },
+    {
+        "IP/HOST": "sgp.proof.ovh.net",
+        "PORT": "5204-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "1",
+        "CONTINENT": "OVH",
+        "COUNTRY": "SG",
+        "SITE": "Singapore",
+        "PROVIDER": "Asia"
+    },
+    {
+        "IP/HOST": "speedtest.ownit.se",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "1",
+        "CONTINENT": "Ownit",
+        "COUNTRY": "SE",
+        "SITE": "Stockholm",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest1.sox.rs",
+        "PORT": "9201-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "10",
+        "CONTINENT": "SOX",
+        "COUNTRY": "RS",
+        "SITE": "Belgrade",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.shinternet.ch",
+        "PORT": "5200-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "10",
+        "CONTINENT": "Sasag",
+        "COUNTRY": "CH",
+        "SITE": "Schaffhausen",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "ping-ams1.online.net",
+        "PORT": "5200-5209",
+        "OPTIONS": "-R,-u",
+        "GB/S": "10",
+        "CONTINENT": "Scaleway",
+        "COUNTRY": "NL",
+        "SITE": "Amsterdam",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "85.163.71.241",
+        "PORT": "5201",
+        "OPTIONS": "-R,-u",
+        "GB/S": "",
+        "CONTINENT": "SledovaniTV",
+        "COUNTRY": "CZ",
+        "SITE": "Hrdlo\u0159ezy",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.telecablecr.com",
+        "PORT": "9201-9240",
+        "OPTIONS": "-R,-u",
+        "GB/S": "1",
+        "CONTINENT": "Telecable CR",
+        "COUNTRY": "CR",
+        "SITE": "San Jos\u00e9",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "lg.ams-nl.terrahost.com",
+        "PORT": "9206-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "",
+        "CONTINENT": "TerraHost",
+        "COUNTRY": "NL",
+        "SITE": "Amsterdam",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "iperf.as42831.net",
+        "PORT": "5300-5400",
+        "OPTIONS": "-R,-u",
+        "GB/S": "",
+        "CONTINENT": "UK Servers",
+        "COUNTRY": "GB",
+        "SITE": "London",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.uztelecom.uz",
+        "PORT": "5200-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "10",
+        "CONTINENT": "UZ Telecom",
+        "COUNTRY": "UZ",
+        "SITE": "Tashkent",
+        "PROVIDER": "Asia"
+    },
+    {
+        "IP/HOST": "st1.zamix.com.br",
+        "PORT": "3000-3009",
+        "OPTIONS": "-R,-u",
+        "GB/S": "1",
+        "CONTINENT": "Zamix",
+        "COUNTRY": "BR",
+        "SITE": "Barra Mansa",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "speedtest.sao1.edgoo.net",
+        "PORT": "9206-9240",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "",
+        "CONTINENT": "as47787.net",
+        "COUNTRY": "BR",
+        "SITE": "S\u00e3o Paulo",
+        "PROVIDER": "Latin America"
+    },
+    {
+        "IP/HOST": "as21723.goco.ca",
+        "PORT": "9200-9240",
+        "OPTIONS": "-R,-u",
+        "GB/S": "",
+        "CONTINENT": "goco",
+        "COUNTRY": "CA",
+        "SITE": "Montr\u00e9al",
+        "PROVIDER": "North America"
+    },
+    {
+        "IP/HOST": "speedtest.wtnet.de",
+        "PORT": "5200-5209",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "40",
+        "CONTINENT": "wilhelm.tel",
+        "COUNTRY": "DE",
+        "SITE": "Norderstedt",
+        "PROVIDER": "Europe"
+    },
+    {
+        "IP/HOST": "speedtest.wtnet.de",
+        "PORT": "5300-5309",
+        "OPTIONS": "-R,-6,-u",
+        "GB/S": "40",
+        "CONTINENT": "wilhelm.tel",
+        "COUNTRY": "DE",
+        "SITE": "Norderstedt",
+        "PROVIDER": "Europe"
     }
 ]
