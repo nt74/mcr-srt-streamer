@@ -50,10 +50,10 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 class NetworkTester:
     def __init__(self):
-        self.servers = []
+        self.servers: List[Dict[str, Any]] = []
         self.load_servers()  # Load servers on initialization
 
-    def _download_iperf_list(self, force_update=False):
+    def _download_iperf_list(self, force_update: bool = False) -> bool:
         needs_download = force_update
         if not os.path.exists(IPERF_FULL_LIST_PATH):
             logger.info(f"Cache file not found: {IPERF_FULL_LIST_PATH}. Downloading.")
@@ -127,7 +127,9 @@ class NetworkTester:
         else:
             return False
 
-    def _parse_host_port(self, server_entry):
+    def _parse_host_port(
+        self, server_entry: Dict[str, Any]
+    ) -> Tuple[Optional[str], Optional[int]]:
         host = server_entry.get("IP/HOST", "").strip()
         port_str = server_entry.get("PORT", "").strip()
         port = DEFAULT_IPERF_PORT
@@ -169,14 +171,15 @@ class NetworkTester:
             return None, None
         return host, port
 
-    def load_servers(self):
+    def load_servers(self) -> None:
         logger.info(
             f"Loading iperf3 server list (Mechanism: {NETWORK_TEST_MECHANISM})..."
         )
-        processed_servers = []
-        raw_servers = []
-        source_file = None
+        processed_servers: List[Dict[str, Any]] = []
+        raw_servers: List[Any] = []
+        source_file: Optional[str] = None
         source_type = "full"
+
         if NETWORK_TEST_MECHANISM == "iperf":
             use_safe_list = False
             if os.path.exists(UDP_SAFE_LIST_PATH) and os.path.exists(
@@ -200,6 +203,7 @@ class NetworkTester:
                     )
             else:
                 logger.info("UDP safe server list not found.")
+
             if use_safe_list:
                 try:
                     with open(source_file, "r", encoding="utf-8") as f:
@@ -228,6 +232,7 @@ class NetworkTester:
                     raw_servers = []
                     use_safe_list = False
                     source_type = "full"
+
         if source_type == "full":
             logger.info("Loading full iperf3 server list.")
             self._download_iperf_list()
@@ -255,6 +260,7 @@ class NetworkTester:
             else:
                 logger.error(f"Full server list file unavailable: {source_file}")
                 raw_servers = []
+
         count_parsed = 0
         for index, raw_server in enumerate(raw_servers):
             if not isinstance(raw_server, dict):
@@ -262,14 +268,10 @@ class NetworkTester:
                 continue
             host, port = self._parse_host_port(raw_server)
 
-            # FIXED: Now use PROVIDER as the continent (which contains actual continent names)
-            # and keep CONTINENT as provider_name (which contains ISP/provider names)
-            continent = raw_server.get(
-                "PROVIDER", ""
-            ).strip()  # This now contains actual continent
-            provider_name = raw_server.get(
-                "CONTINENT", ""
-            ).strip()  # This now contains ISP/provider name
+            # ✅ CORRECT MAPPING:
+            # CONTINENT = region, PROVIDER = ISP / hosting provider
+            continent = raw_server.get("CONTINENT", "").strip()
+            provider_name = raw_server.get("PROVIDER", "").strip()
 
             if host and port and continent:
                 processed_servers.append(
@@ -278,11 +280,8 @@ class NetworkTester:
                         "port": port,
                         "site": raw_server.get("SITE", "N/A"),
                         "country": raw_server.get("COUNTRY"),
-                        "continent": continent,  # Now correctly using PROVIDER field
-                        "provider": provider_name
-                        or raw_server.get(
-                            "PROVIDER"
-                        ),  # Keep both for backward compatibility
+                        "continent": continent,  # correct: CONTINENT field
+                        "provider": provider_name,  # correct: PROVIDER field
                         "options_str": raw_server.get("OPTIONS"),
                     }
                 )
@@ -298,7 +297,8 @@ class NetworkTester:
         if not self.servers:
             logger.warning(f"Server list is empty after processing {source_type} list.")
 
-    def get_server_regions(self):
+    def get_server_regions(self) -> List[str]:
+        """Used by the web GUI to populate region dropdown."""
         if not self.servers:
             self.load_servers()
         continents = set(
@@ -658,9 +658,9 @@ class NetworkTester:
             )
             logger.error(err)
             return None, err
-        target_servers_to_test = []
+        target_servers_to_test: List[Dict[str, Any]] = []
         test_target_label = "N/A"
-        best_rtt_server_info = None
+        best_rtt_server_info: Optional[Dict[str, Any]] = None
 
         # --- 1. Determine Target Server(s) ---
         if mode == "manual":
@@ -687,9 +687,8 @@ class NetworkTester:
             logger.info(f"Regional targets({region}): {test_target_label}")
         else:  # 'closest' mode
             mode = "closest"
-            # Use the location info dictionary passed in from the caller
             if not location_info_dict_from_caller:
-                return None, f"Closest mode failed: Location info not provided."
+                return None, "Closest mode failed: Location info not provided."
             continent_name = location_info_dict_from_caller.get("continent")
             if not continent_name:
                 return (
@@ -703,7 +702,7 @@ class NetworkTester:
                 return None, f"No servers found for your continent: {continent_name}"
             num_candidates = min(7, len(regional_servers))
             candidates_to_ping = random.sample(regional_servers, num_candidates)
-            ping_results = []
+            ping_results: List[Dict[str, Any]] = []
             logger.info(f"Pinging {num_candidates} candidates in {continent_name}...")
             for server in candidates_to_ping:
                 rtt, ping_error = self.run_ping(server["host"])  # Expect tuple
@@ -726,9 +725,10 @@ class NetworkTester:
             logger.info(f"Closest selected: {test_target_label}")
 
         # --- 2. Run Tests ---
-        all_results_raw = []
+        all_results_raw: List[Dict[str, Any]] = []
         if not target_servers_to_test:
             return None, "No target servers selected for testing."
+
         for server in target_servers_to_test:
             host = server["host"]
             port = server["port"]
@@ -737,8 +737,9 @@ class NetworkTester:
             ping_error = None
             if rtt is None:
                 rtt, ping_error = self.run_ping(host)
-            iperf_result = None
-            iperf_error = None
+            iperf_result: Optional[Dict[str, Any]] = None
+            iperf_error: Optional[str] = None
+
             if NETWORK_TEST_MECHANISM == "ping_only":
                 logger.info("Mechanism 'ping_only'. Skipping iperf3.")
                 iperf_result = None
@@ -773,6 +774,7 @@ class NetworkTester:
                 iperf_result = None
                 iperf_error = f"Unknown mode '{mode}'"
                 logger.error(f"Unexpected mode '{mode}'.")
+
             all_results_raw.append(
                 {
                     "host": host,
@@ -829,10 +831,19 @@ class NetworkTester:
                 f"SRT estimated (Ping only, assumed {aggregate_loss}% loss)"
             )
         elif successful_udp_results:
-            udp_res = successful_udp_results[0]
-            aggregate_loss = float(udp_res.get("loss_percent", 0.0))
-            aggregate_jitter = float(udp_res.get("jitter_ms", 0.0))
-            aggregate_bandwidth = float(udp_res.get("bandwidth_mbps", 0.0))
+            # If multiple UDP results, we simply average them (no bogus fallback)
+            loss_vals = [
+                float(u.get("loss_percent", 0.0)) for u in successful_udp_results
+            ]
+            jitter_vals = [
+                float(u.get("jitter_ms", 0.0)) for u in successful_udp_results
+            ]
+            bw_vals = [
+                float(u.get("bandwidth_mbps", 0.0)) for u in successful_udp_results
+            ]
+            aggregate_loss = sum(loss_vals) / len(loss_vals)
+            aggregate_jitter = sum(jitter_vals) / len(jitter_vals)
+            aggregate_bandwidth = sum(bw_vals) / len(bw_vals)
             bandwidth_type = "UDP"
             srt_settings, srt_calc_error = self.calculate_srt_settings(
                 avg_rtt, aggregate_loss
@@ -844,8 +855,11 @@ class NetworkTester:
                 else "Used Manual UDP test."
             )
         elif successful_tcp_results:
-            tcp_res = successful_tcp_results[0]
-            aggregate_bandwidth = float(tcp_res.get("bandwidth_mbps", 0.0))
+            # If multiple TCP results, we simply average bandwidth
+            bw_vals = [
+                float(t.get("bandwidth_mbps", 0.0)) for t in successful_tcp_results
+            ]
+            aggregate_bandwidth = sum(bw_vals) / len(bw_vals)
             bandwidth_type = "TCP"
             aggregate_loss = ASSUMED_LOSS_FOR_TCP_FALLBACK
             aggregate_jitter = None
@@ -891,7 +905,7 @@ class NetworkTester:
                 else f"{region} (Multiple Servers)"
             )
 
-        final_result = {
+        final_result: Dict[str, Any] = {
             "server": test_target_label,
             "server_location": server_location_display,
             "rtt_ms": avg_rtt,
